@@ -1,0 +1,269 @@
+import os
+import shutil
+from uuid import UUID
+
+from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from app.database.database import get_db
+from app.models.job import Job
+from app.models.candidate import Candidate
+from app.models.candidate_skill import CandidateSkill
+from app.schemas.candidate import CandidateStatusUpdate
+
+from app.services.pdf_parser import extract_text_from_pdf
+from app.services.resume_analyzer import (
+    extract_email,
+    extract_phone,
+    extract_name,
+    extract_skills,
+    calculate_skill_score
+)
+from app.services.experience import (
+    extract_experience_years,
+    calculate_experience_score
+)
+from app.services.similarity import calculate_similarity_score
+
+
+router = APIRouter(prefix="/candidates", tags=["Candidates"])
+
+UPLOAD_DIR = "uploads"
+
+
+@router.post("/jobs/{job_id}/upload-resume")
+def upload_resume(
+    job_id: UUID,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    job = db.query(Job).filter(Job.id == job_id).first()
+
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+    file_path = os.path.join(UPLOAD_DIR, file.filename)
+
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    resume_text = extract_text_from_pdf(file_path)
+
+    name = extract_name(resume_text)
+    email = extract_email(resume_text)
+    phone = extract_phone(resume_text)
+    found_skills = extract_skills(resume_text)
+
+    skill_score, matched_skills = calculate_skill_score(
+        found_skills,
+        job.required_skills
+    )
+
+    experience_years = extract_experience_years(resume_text)
+
+    experience_score = calculate_experience_score(
+        experience_years,
+        job.minimum_experience
+    )
+
+    similarity_score = calculate_similarity_score(
+        job.description,
+        resume_text
+    )
+
+    overall_score = round(
+        (skill_score * 0.40) +
+        (similarity_score * 0.35) +
+        (experience_score * 0.25),
+        2
+    )
+
+    candidate = Candidate(
+        job_id=job_id,
+        name=name,
+        email=email,
+        phone=phone,
+        experience_years=experience_years,
+        resume_text=resume_text,
+        resume_file_url=file_path,
+        skill_score=skill_score,
+        similarity_score=similarity_score,
+        experience_score=experience_score,
+        overall_score=overall_score,
+        status="Processed"
+    )
+
+    db.add(candidate)
+    db.commit()
+    db.refresh(candidate)
+
+    required_skills = [skill.lower() for skill in job.required_skills]
+
+    for skill in found_skills:
+        candidate_skill = CandidateSkill(
+            candidate_id=candidate.id,
+            skill=skill,
+            evidence=f"Detected from resume: {skill}",
+            matched=skill.lower() in required_skills
+        )
+        db.add(candidate_skill)
+
+    db.commit()
+
+    return {
+        "message": "Resume uploaded and analyzed successfully",
+        "candidate_id": str(candidate.id),
+        "job_id": str(job_id),
+        "file_name": file.filename,
+        "name": name,
+        "email": email,
+        "phone": phone,
+        "found_skills": found_skills,
+        "matched_skills": matched_skills,
+        "total_skills_found": len(found_skills),
+        "matched_count": len(matched_skills),
+        "experience_years": experience_years,
+        "skill_score": skill_score,
+        "similarity_score": similarity_score,
+        "experience_score": experience_score,
+        "overall_score": overall_score,
+        "resume_text_preview": resume_text[:500]
+    }
+
+
+@router.get("/")
+def get_all_candidates(db: Session = Depends(get_db)):
+    candidates = db.query(Candidate).order_by(Candidate.overall_score.desc()).all()
+
+    return [
+        {
+            "id": str(candidate.id),
+            "job_id": str(candidate.job_id),
+            "name": candidate.name,
+            "email": candidate.email,
+            "phone": candidate.phone,
+            "overall_score": candidate.overall_score,
+            "skill_score": candidate.skill_score,
+            "similarity_score": candidate.similarity_score,
+            "experience_score": candidate.experience_score,
+            "experience_years": candidate.experience_years,
+            "status": candidate.status,
+            "created_at": candidate.created_at
+        }
+        for candidate in candidates
+    ]
+
+
+@router.get("/jobs/{job_id}")
+def get_candidates_by_job(job_id: UUID, db: Session = Depends(get_db)):
+    job = db.query(Job).filter(Job.id == job_id).first()
+
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    candidates = (
+        db.query(Candidate)
+        .filter(Candidate.job_id == job_id)
+        .order_by(Candidate.overall_score.desc())
+        .all()
+    )
+
+    return {
+        "job": {
+            "id": str(job.id),
+            "title": job.title,
+            "description": job.description,
+            "required_skills": job.required_skills,
+            "optional_skills": job.optional_skills,
+            "minimum_experience": job.minimum_experience
+        },
+        "candidates": [
+            {
+                "id": str(candidate.id),
+                "name": candidate.name,
+                "email": candidate.email,
+                "phone": candidate.phone,
+                "overall_score": candidate.overall_score,
+                "skill_score": candidate.skill_score,
+                "similarity_score": candidate.similarity_score,
+                "experience_score": candidate.experience_score,
+                "experience_years": candidate.experience_years,
+                "status": candidate.status,
+                "created_at": candidate.created_at
+            }
+            for candidate in candidates
+        ]
+    }
+
+
+@router.get("/{candidate_id}")
+def get_candidate_details(candidate_id: UUID, db: Session = Depends(get_db)):
+    candidate = db.query(Candidate).filter(Candidate.id == candidate_id).first()
+
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+
+    skills = (
+        db.query(CandidateSkill)
+        .filter(CandidateSkill.candidate_id == candidate_id)
+        .all()
+    )
+
+    return {
+        "id": str(candidate.id),
+        "job_id": str(candidate.job_id),
+        "name": candidate.name,
+        "email": candidate.email,
+        "phone": candidate.phone,
+        "education": candidate.education,
+        "companies": candidate.companies,
+        "experience_years": candidate.experience_years,
+        "resume_file_url": candidate.resume_file_url,
+        "overall_score": candidate.overall_score,
+        "skill_score": candidate.skill_score,
+        "similarity_score": candidate.similarity_score,
+        "experience_score": candidate.experience_score,
+        "ai_summary": candidate.ai_summary,
+        "status": candidate.status,
+        "skills": [
+            {
+                "skill": skill.skill,
+                "evidence": skill.evidence,
+                "matched": skill.matched
+            }
+            for skill in skills
+        ],
+        "resume_text": candidate.resume_text,
+        "created_at": candidate.created_at
+    }
+
+
+@router.patch("/{candidate_id}/status")
+def update_candidate_status(
+    candidate_id: UUID,
+    request: CandidateStatusUpdate,
+    db: Session = Depends(get_db)
+):
+    candidate = db.query(Candidate).filter(Candidate.id == candidate_id).first()
+
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+
+    candidate.status = request.status
+
+    db.commit()
+    db.refresh(candidate)
+
+    return {
+        "message": "Candidate status updated successfully",
+        "candidate": {
+            "id": str(candidate.id),
+            "name": candidate.name,
+            "status": candidate.status
+        }
+    }
