@@ -59,13 +59,13 @@ function App() {
           <button className="menu-btn">☰</button>
 
           <div className="search">
-            🔍 <input placeholder="Search anything..." />
+             <input placeholder="Search anything..." />
             <span>Ctrl K</span>
           </div>
 
           <div className="admin-box">
             <div className="notification">
-              🔔<b>3</b>
+              
             </div>
             <div className="avatar">HR</div>
             <div>
@@ -100,7 +100,7 @@ function DashboardPage() {
     <>
       <section className="hero">
         <div>
-          <h1>Dashboard 👋</h1>
+          <h1>Dashboard </h1>
           <p>
             
           </p>
