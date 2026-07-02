@@ -57,8 +57,6 @@ a {
     #f8faff;
 }
 
-/* SIDEBAR */
-
 .sidebar {
   width: 285px;
   min-height: 100vh;
@@ -207,8 +205,6 @@ a {
   font-size: 22px;
 }
 
-/* MAIN + TOPBAR */
-
 .main {
   flex: 1;
   padding: 28px 34px;
@@ -283,7 +279,6 @@ a {
   padding: 3px 6px;
   border-radius: 999px;
 }
-/* HERO */
 
 .hero {
   display: flex;
@@ -312,8 +307,6 @@ a {
   color: #263244;
   box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
 }
-
-/* STAT CARDS */
 
 .stats {
   display: grid;
@@ -391,8 +384,6 @@ a {
   font-size: 13px;
 }
 
-/* CONTENT GRID */
-
 .content-grid,
 .bottom-grid {
   display: grid;
@@ -432,8 +423,6 @@ a {
   font-size: 14px;
   cursor: pointer;
 }
-
-/* CHART */
 
 .legend {
   display: flex;
@@ -507,17 +496,17 @@ a {
 }
 
 .purple-line {
-  bottom: 135px;
+  bottom: 180px;
   background: linear-gradient(90deg, #7c3aed, #9333ea);
 }
 
 .blue-line {
-  bottom: 98px;
+  bottom: 140px;
   background: linear-gradient(90deg, #2563eb, #3b82f6);
 }
 
 .green-line {
-  bottom: 62px;
+  bottom: 100px;
   background: linear-gradient(90deg, #22c55e, #16a34a);
 }
 
@@ -532,8 +521,6 @@ a {
   font-size: 13px;
   font-weight: 600;
 }
-
-/* ACTIVITY */
 
 .activity-item {
   display: flex;
@@ -573,8 +560,6 @@ a {
   font-size: 13px;
   font-weight: 700;
 }
-
-/* TABLE */
 
 .table-panel {
   overflow-x: auto;
@@ -635,8 +620,6 @@ tbody tr:hover {
   background: #fee2e2;
   color: #ef4444;
 }
-
-/* SKILLS DONUT */
 
 .skills-box {
   display: flex;
@@ -700,7 +683,6 @@ tbody tr:hover {
   color: #344054;
   font-weight: 700;
 }
-/* OTHER PAGES */
 
 .placeholder-page {
   margin-top: 20px;
@@ -719,6 +701,7 @@ tbody tr:hover {
   font-weight: 900;
   margin-bottom: 10px;
   background: linear-gradient(135deg, var(--blue), var(--primary-light));
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -799,8 +782,6 @@ tbody tr:hover {
   transform: scale(0.98);
 }
 
-/* FILE UPLOAD BEAUTY */
-
 input[type="file"] {
   background: #f8faff;
   border: 2px dashed #c7d2fe;
@@ -812,8 +793,6 @@ input[type="file"]:hover {
   border-color: var(--primary);
   background: #f5f3ff;
 }
-
-/* OPTIONAL EMPTY STATE */
 
 .empty-state {
   padding: 40px;
@@ -831,8 +810,6 @@ input[type="file"]:hover {
 .empty-state p {
   color: var(--muted);
 }
-
-/* SCROLLBAR */
 
 ::-webkit-scrollbar {
   width: 10px;
@@ -852,8 +829,6 @@ input[type="file"]:hover {
   background: linear-gradient(135deg, var(--primary), var(--primary-light));
 }
 
-/* ANIMATION */
-
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -865,8 +840,6 @@ input[type="file"]:hover {
     transform: translateY(0);
   }
 }
-
-/* RESPONSIVE */
 
 @media (max-width: 1300px) {
   .stats {
