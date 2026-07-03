@@ -1,4 +1,5 @@
 import { useState } from "react";
+import API from "./services/api";
 import "./index.css";
 
 function App() {
@@ -17,17 +18,26 @@ function App() {
 
   return (
     <div className="dashboard">
+
+      {/* Sidebar */}
+
       <aside className="sidebar">
+
         <div className="brand">
+
           <div className="brand-icon">✦</div>
+
           <div>
             <h2>HireAI</h2>
-            <p>AI-Powered Hiring</p>
+            <p>AI Powered Hiring Platform</p>
           </div>
+
         </div>
 
         <nav className="menu">
+
           {menuItems.map((item) => (
+
             <a
               key={item}
               className={activePage === item ? "active" : ""}
@@ -35,266 +45,636 @@ function App() {
             >
               {item}
             </a>
+
           ))}
+
         </nav>
 
         <div className="upgrade-card">
+
           <h3>Upgrade to Pro</h3>
-          <p>Unlock advanced analytics and AI insights.</p>
-          <button>🚀 Upgrade Now</button>
+
+          <p>
+            Unlock AI analytics, reports and candidate recommendations.
+          </p>
+
+          <button>🚀 Upgrade</button>
+
         </div>
 
         <div className="user-card">
+
           <div className="avatar">HR</div>
+
           <div>
             <h4>HR Admin</h4>
             <p>hr@hireai.com</p>
           </div>
-          <span>⋮</span>
+
         </div>
+
       </aside>
 
+      {/* Main */}
+
       <main className="main">
+
         <header className="topbar">
-          <button className="menu-btn">☰</button>
+
+          <button className="menu-btn">
+            ☰
+          </button>
 
           <div className="search">
-            🔍 <input placeholder="Search anything..." />
-            <span>Ctrl K</span>
+
+            🔍
+
+            <input
+              placeholder="Search Jobs, Candidates..."
+            />
+
           </div>
 
           <div className="admin-box">
+
             <div className="notification">
-              🔔<b>3</b>
+              🔔
             </div>
-            <div className="avatar">HR</div>
-            <div>
-              <h4>HR Admin</h4>
-              <p>Administrator</p>
+
+            <div className="avatar">
+              HR
             </div>
+
           </div>
+
         </header>
 
         {activePage === "Dashboard" && <DashboardPage />}
 
-        {activePage !== "Dashboard" && (
-          <section className="placeholder-page">
-            <div className="panel">
-              <h1>{activePage}</h1>
-              <p>This page is ready to connect with your HireAI backend APIs.</p>
+        {activePage === "Jobs" && <JobsPreview />}
 
-              {activePage === "Jobs" && <JobsPreview />}
-              {activePage === "Create Job" && <CreateJobPreview />}
-              {activePage === "Candidates" && <CandidatesPreview />}
-              {activePage === "Upload Resume" && <UploadResumePreview />}
-            </div>
-          </section>
-        )}
+        {activePage === "Create Job" && <CreateJobPreview />}
+
+        {activePage === "Candidates" && <CandidatesPreview />}
+
+        {activePage === "Upload Resume" && <UploadResumePreview />}
+
       </main>
+
     </div>
   );
 }
+
+/* ===========================
+      DASHBOARD
+=========================== */
 
 function DashboardPage() {
   return (
     <>
+
       <section className="hero">
+
         <div>
-          <h1>Dashboard 👋</h1>
+
+          <h1>
+            Welcome back 👋
+          </h1>
+
           <p>
-            
+            HireAI Recruitment Dashboard
           </p>
+
         </div>
-        <button className="date-btn">📅 Jul 1, 2026 - Jul 31, 2026</button>
+
       </section>
 
       <section className="stats">
-        <Stat icon="💼" title="Total Jobs" value="12" note="↑ 2 from last month" color="purple" />
-        <Stat icon="👥" title="Total Candidates" value="148" note="↑ 18% from last month" color="blue" />
-        <Stat icon="📄" title="Resumes Uploaded" value="156" note="↑ 22% from last month" color="green" />
-        <Stat icon="📈" title="Average Match Score" value="84%" note="↑ 6% from last month" color="orange" />
+
+        <Stat
+          icon="💼"
+          title="Jobs"
+          value="12"
+          note="Active Jobs"
+          color="purple"
+        />
+
+        <Stat
+          icon="👥"
+          title="Candidates"
+          value="148"
+          note="Registered"
+          color="blue"
+        />
+
+        <Stat
+          icon="📄"
+          title="Resumes"
+          value="156"
+          note="Uploaded"
+          color="green"
+        />
+
+        <Stat
+          icon="⭐"
+          title="Match Score"
+          value="84%"
+          note="Average"
+          color="orange"
+        />
+
       </section>
 
-      <section className="content-grid">
-        <div className="panel chart-panel">
-          <div className="panel-head">
-            <h2>Hiring Overview</h2>
-            <button>Last 30 days⌄</button>
-          </div>
-
-          <div className="legend">
-            <span><b className="dot purple-dot"></b>Job Postings</span>
-            <span><b className="dot blue-dot"></b>Resumes</span>
-            <span><b className="dot green-dot"></b>Hired</span>
-          </div>
-
-          <div className="line-chart">
-            <div className="grid-line"></div>
-            <div className="chart-line purple-line"></div>
-            <div className="chart-line blue-line"></div>
-            <div className="chart-line green-line"></div>
-            <div className="chart-labels">
-              <span>Jun 1</span>
-              <span>Jun 8</span>
-              <span>Jun 15</span>
-              <span>Jun 22</span>
-              <span>Jun 29</span>
-              <span>Jul 1</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="panel activity-panel">
-          <div className="panel-head">
-            <h2>Recent Activity</h2>
-            <a>View All</a>
-          </div>
-
-          <Activity icon="📄" title="New resume uploaded" text="John Doe applied for Frontend Developer" time="10m ago" />
-          <Activity icon="👤" title="Candidate shortlisted" text="Sarah Smith matched 92% for AI Engineer" time="1h ago" />
-          <Activity icon="💼" title="New job posted" text="Backend Developer position created" time="2h ago" />
-          <Activity icon="✅" title="Candidate hired" text="Michael Brown hired for Data Scientist" time="5h ago" />
-        </div>
-      </section>
-
-      <section className="bottom-grid">
-        <div className="panel table-panel">
-          <div className="panel-head">
-            <h2>Recent Job Postings</h2>
-            <a>View All Jobs</a>
-          </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th>Job Title</th>
-                <th>Department</th>
-                <th>Candidates</th>
-                <th>Status</th>
-                <th>Posted On</th>
-              </tr>
-            </thead>
-            <tbody>
-              <JobRow icon="</>" title="Frontend Developer" dept="Engineering" candidates="24" status="Open" date="Jul 1, 2026" />
-              <JobRow icon="≡" title="Backend Developer" dept="Engineering" candidates="18" status="Open" date="Jun 30, 2026" />
-              <JobRow icon="AI" title="AI Engineer" dept="AI/ML" candidates="36" status="Closed" date="Jun 28, 2026" />
-              <JobRow icon="📈" title="Data Scientist" dept="Data Science" candidates="28" status="Open" date="Jun 27, 2026" />
-            </tbody>
-          </table>
-        </div>
-
-        <div className="panel skills-panel">
-          <div className="panel-head">
-            <h2>Top Skills Demand</h2>
-            <a>View All</a>
-          </div>
-
-          <div className="skills-box">
-            <div className="donut">
-              <div>
-                <h2>156</h2>
-                <p>Total Skills</p>
-              </div>
-            </div>
-
-            <ul>
-              <li><span className="purple-dot"></span>Python <b>28%</b></li>
-              <li><span className="blue-dot"></span>React <b>24%</b></li>
-              <li><span className="green-dot"></span>AI/ML <b>18%</b></li>
-              <li><span className="orange-dot"></span>SQL <b>14%</b></li>
-              <li><span className="gray-dot"></span>Others <b>16%</b></li>
-            </ul>
-          </div>
-        </div>
-      </section>
     </>
   );
 }
+/* ===========================
+      JOBS PAGE
+=========================== */
 
 function JobsPreview() {
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const fetchJobs = async () => {
+    try {
+      setLoading(true);
+      setMessage("");
+
+      const response = await API.get("/jobs/");
+      setJobs(response.data);
+
+      setMessage("✅ Jobs loaded successfully");
+    } catch (error) {
+      console.error(error);
+      setMessage("❌ Failed to load jobs. Make sure backend is running.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteJob = async (jobId) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this job?"
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      await API.delete(`/jobs/${jobId}`);
+
+      setJobs(jobs.filter((job) => job.id !== jobId));
+
+      setMessage("✅ Job deleted successfully");
+    } catch (error) {
+      console.error(error);
+      setMessage("❌ Failed to delete job.");
+    }
+  };
+
   return (
-    <div className="mini-section">
-      <h2>Job Management</h2>
-      <p>View, update, and delete job postings from the backend.</p>
-      <button className="primary-btn">Fetch Jobs</button>
-    </div>
+    <section className="placeholder-page">
+      <div className="panel">
+
+        <div className="panel-head">
+          <div>
+            <h1>Job Management</h1>
+            <p>
+              Manage job postings stored in PostgreSQL.
+            </p>
+          </div>
+
+          <button className="primary-btn" onClick={fetchJobs}>
+            Refresh Jobs
+          </button>
+        </div>
+
+        {message && (
+          <p className="form-message">
+            {message}
+          </p>
+        )}
+
+        {loading && (
+          <p className="loading-text">
+            Loading jobs...
+          </p>
+        )}
+
+        {!loading && jobs.length === 0 && (
+          <div className="empty-state">
+            <h3>No jobs found</h3>
+            <p>
+              Click Refresh Jobs or create a new job first.
+            </p>
+          </div>
+        )}
+
+        {!loading && jobs.length > 0 && (
+          <div className="table-panel">
+            <table>
+              <thead>
+                <tr>
+                  <th>Job Title</th>
+                  <th>Description</th>
+                  <th>Required Skills</th>
+                  <th>Experience</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {jobs.map((job) => (
+                  <tr key={job.id}>
+                    <td>
+                      <strong>{job.title}</strong>
+                    </td>
+
+                    <td>
+                      {job.description?.slice(0, 80)}
+                      {job.description?.length > 80 ? "..." : ""}
+                    </td>
+
+                    <td>
+                      {job.required_skills?.join(", ")}
+                    </td>
+
+                    <td>
+                      {job.minimum_experience} Years
+                    </td>
+
+                    <td>
+                      <button
+                        className="delete-btn"
+                        onClick={() => deleteJob(job.id)}
+                      >
+                        🗑 Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+      </div>
+    </section>
   );
 }
+/* ===========================
+      CREATE JOB PAGE
+=========================== */
 
 function CreateJobPreview() {
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    required_skills: "",
+    optional_skills: "",
+    minimum_experience: "",
+  });
+
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleCreateJob = async () => {
+    try {
+      setLoading(true);
+      setMessage("");
+
+      const payload = {
+        title: formData.title,
+        description: formData.description,
+        required_skills: formData.required_skills
+          .split(",")
+          .map((skill) => skill.trim())
+          .filter(Boolean),
+        optional_skills: formData.optional_skills
+          .split(",")
+          .map((skill) => skill.trim())
+          .filter(Boolean),
+        minimum_experience: Number(formData.minimum_experience),
+      };
+
+      await API.post("/jobs/", payload);
+
+      setMessage("✅ Job created successfully!");
+
+      setFormData({
+        title: "",
+        description: "",
+        required_skills: "",
+        optional_skills: "",
+        minimum_experience: "",
+      });
+    } catch (error) {
+      console.error(error);
+      setMessage("❌ Failed to create job. Check backend.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="mini-section">
-      <h2>Create New Job</h2>
-      <input placeholder="Job Title" />
-      <textarea placeholder="Job Description"></textarea>
-      <button className="primary-btn">Create Job</button>
-    </div>
+    <section className="placeholder-page">
+      <div className="panel">
+        <h1>Create Job</h1>
+        <p>Create a new job role for AI-powered resume matching.</p>
+
+        <div className="mini-section">
+          <input
+            name="title"
+            placeholder="Job Title"
+            value={formData.title}
+            onChange={handleChange}
+          />
+
+          <textarea
+            name="description"
+            placeholder="Job Description"
+            value={formData.description}
+            onChange={handleChange}
+          />
+
+          <input
+            name="required_skills"
+            placeholder="Required Skills: React, Python, FastAPI"
+            value={formData.required_skills}
+            onChange={handleChange}
+          />
+
+          <input
+            name="optional_skills"
+            placeholder="Optional Skills: Docker, AWS"
+            value={formData.optional_skills}
+            onChange={handleChange}
+          />
+
+          <input
+            name="minimum_experience"
+            type="number"
+            placeholder="Minimum Experience"
+            value={formData.minimum_experience}
+            onChange={handleChange}
+          />
+
+          <button className="primary-btn" onClick={handleCreateJob}>
+            {loading ? "Creating..." : "Create Job"}
+          </button>
+
+          {message && <p className="form-message">{message}</p>}
+        </div>
+      </div>
+    </section>
   );
 }
+
+/* ===========================
+      CANDIDATES PAGE
+=========================== */
 
 function CandidatesPreview() {
+  const [candidates, setCandidates] = useState([]);
+  const [message, setMessage] = useState("");
+
+  const fetchCandidates = async () => {
+    try {
+      const response = await API.get("/candidates/");
+      setCandidates(response.data);
+      setMessage("✅ Candidates loaded successfully");
+    } catch (error) {
+      console.error(error);
+      setMessage("❌ Failed to load candidates");
+    }
+  };
+
   return (
-    <div className="mini-section">
-      <h2>Candidate Ranking</h2>
-      <p>Show candidates sorted by AI overall score.</p>
-      <button className="primary-btn">Load Candidates</button>
-    </div>
+    <section className="placeholder-page">
+      <div className="panel">
+        <div className="panel-head">
+          <div>
+            <h1>Candidates</h1>
+            <p>View AI-ranked candidates from your backend.</p>
+          </div>
+
+          <button className="primary-btn" onClick={fetchCandidates}>
+            Load Candidates
+          </button>
+        </div>
+
+        {message && <p className="form-message">{message}</p>}
+
+        {candidates.length > 0 && (
+          <div className="table-panel">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Skill Score</th>
+                  <th>Similarity</th>
+                  <th>Overall</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {candidates.map((candidate) => (
+                  <tr key={candidate.id}>
+                    <td>{candidate.name || "Unknown"}</td>
+                    <td>{candidate.email || "Not found"}</td>
+                    <td>{candidate.skill_score}</td>
+                    <td>{candidate.similarity_score}</td>
+                    <td>
+                      <strong>{candidate.overall_score}</strong>
+                    </td>
+                    <td>
+                      <span className="status open">
+                        {candidate.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 
+/* ===========================
+      UPLOAD RESUME PAGE
+=========================== */
+
 function UploadResumePreview() {
+  const [jobId, setJobId] = useState("");
+  const [file, setFile] = useState(null);
+  const [result, setResult] = useState(null);
+  const [message, setMessage] = useState("");
+
+  const handleUpload = async () => {
+    if (!jobId || !file) {
+      setMessage("❌ Please enter Job ID and select a PDF file.");
+      return;
+    }
+
+    try {
+      setMessage("Uploading and analyzing resume...");
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await API.post(
+        `/candidates/jobs/${jobId}/upload-resume`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      setResult(response.data);
+      setMessage("✅ Resume uploaded and analyzed successfully");
+    } catch (error) {
+      console.error(error);
+      setMessage("❌ Resume upload failed.");
+    }
+  };
+
   return (
-    <div className="mini-section">
-      <h2>Upload Resume</h2>
-      <p>Upload PDF resumes and analyze them using AI scoring.</p>
-      <input type="file" />
-      <button className="primary-btn">Upload Resume</button>
-    </div>
+    <section className="placeholder-page">
+      <div className="panel">
+        <h1>Upload Resume</h1>
+        <p>Upload PDF resumes and analyze them using HireAI scoring.</p>
+
+        <div className="mini-section">
+          <input
+            placeholder="Enter Job ID"
+            value={jobId}
+            onChange={(e) => setJobId(e.target.value)}
+          />
+
+          <input
+            type="file"
+            accept="application/pdf"
+            onChange={(e) => setFile(e.target.files[0])}
+          />
+
+          <button className="primary-btn" onClick={handleUpload}>
+            Upload Resume
+          </button>
+
+          {message && <p className="form-message">{message}</p>}
+
+          {result && (
+            <div className="empty-state">
+              <h3>Analysis Result</h3>
+              <p><strong>Name:</strong> {result.name || "Unknown"}</p>
+              <p><strong>Email:</strong> {result.email || "Not found"}</p>
+              <p><strong>Skill Score:</strong> {result.skill_score}</p>
+              <p><strong>Similarity Score:</strong> {result.similarity_score}</p>
+              <p><strong>Experience Score:</strong> {result.experience_score}</p>
+              <p><strong>Overall Score:</strong> {result.overall_score}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
   );
 }
+/* ===========================
+      STAT CARD
+=========================== */
 
 function Stat({ icon, title, value, note, color }) {
   return (
     <div className="stat-card">
-      <div className={`stat-icon ${color}`}>{icon}</div>
+
+      <div className={`stat-icon ${color}`}>
+        {icon}
+      </div>
+
       <div>
         <p>{title}</p>
+
         <h2>{value}</h2>
+
         <small>{note}</small>
       </div>
+
     </div>
   );
 }
 
-function Activity({ icon, title, text, time }) {
+/* ===========================
+      ANALYTICS
+=========================== */
+
+function AnalyticsPreview() {
   return (
-    <div className="activity-item">
-      <div className="activity-icon">{icon}</div>
-      <div>
-        <h4>{title}</h4>
-        <p>{text}</p>
+    <section className="placeholder-page">
+      <div className="panel">
+        <h1>Analytics</h1>
+
+        <p>
+          Analytics dashboard will be connected with backend reports.
+        </p>
       </div>
-      <span>{time}</span>
-    </div>
+    </section>
   );
 }
 
-function JobRow({ icon, title, dept, candidates, status, date }) {
+/* ===========================
+      COMPARE
+=========================== */
+
+function CompareCandidatesPreview() {
   return (
-    <tr>
-      <td>
-        <span className="job-icon">{icon}</span>
-        {title}
-      </td>
-      <td>{dept}</td>
-      <td>{candidates}</td>
-      <td>
-        <span className={status === "Open" ? "status open" : "status closed"}>
-          {status}
-        </span>
-      </td>
-      <td>{date}</td>
-    </tr>
+    <section className="placeholder-page">
+      <div className="panel">
+
+        <h1>Compare Candidates</h1>
+
+        <p>
+          Compare AI ranked candidates for the selected job.
+        </p>
+
+      </div>
+    </section>
+  );
+}
+
+/* ===========================
+      SETTINGS
+=========================== */
+
+function SettingsPreview() {
+  return (
+    <section className="placeholder-page">
+
+      <div className="panel">
+
+        <h1>Settings</h1>
+
+        <p>
+          Application settings will be available here.
+        </p>
+
+      </div>
+
+    </section>
   );
 }
 
