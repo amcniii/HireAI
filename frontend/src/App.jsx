@@ -4,8 +4,9 @@ import "./styles/index.css";
 import Dashboard from "./pages/Dashboard";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
+import Candidates from "./pages/Candidates";
 
-import CompareCandidates from "./pages/Compare";
+import CompareCandidates from "./pages/Candidates";
 import {
   BarChart,
   Bar,
@@ -283,8 +284,7 @@ function App() {
 
         {activePage === "Create Job" && <CreateJobPreview />}
 
-        {activePage === "Candidates" && <CandidatesPreview />}
-
+        {activePage === "Candidates" && <Candidates />}
         {activePage === "Upload Resume" && <UploadResumePreview />}
 
 

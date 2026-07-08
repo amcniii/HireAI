@@ -267,3 +267,27 @@ def update_candidate_status(
             "status": candidate.status
         }
     }
+
+@router.delete("/{candidate_id}")
+def delete_candidate(candidate_id: UUID, db: Session = Depends(get_db)):
+    candidate = db.query(Candidate).filter(
+        Candidate.id == candidate_id
+    ).first()
+
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+
+    # Delete all skills belonging to this candidate
+    db.query(CandidateSkill).filter(
+        CandidateSkill.candidate_id == candidate_id
+    ).delete(synchronize_session=False)
+
+    # Delete uploaded resume file
+    if candidate.resume_file_url and os.path.exists(candidate.resume_file_url):
+        os.remove(candidate.resume_file_url)
+
+    # Delete candidate
+    db.delete(candidate)
+    db.commit()
+
+    return {"message": "Candidate deleted successfully"}
