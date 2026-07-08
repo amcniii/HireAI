@@ -1,4 +1,4 @@
-import { useState,useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import API from "./services/api";
 import "./styles/index.css";
 import Dashboard from "./pages/Dashboard";
@@ -23,6 +23,66 @@ function App() {
   const [activePage, setActivePage] = useState("Dashboard");
   const [token, setToken] = useState(localStorage.getItem("token") || "");
   const [user, setUser] = useState(JSON.parse(localStorage.getItem("user") || "null"));
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+  const [notiOpen, setNotiOpen] = useState(false);
+  const notiRef = useRef(null);
+  const [notifications, setNotifications] = useState([
+    {
+      id: 1,
+      icon: "📄",
+      title: "Resume Analyzed",
+      description: "Vishnu Priya has been shortlisted with a 91% match score.",
+      time: "2 hrs ago",
+      read: false,
+      page: "Candidates"
+    },
+    {
+      id: 2,
+      icon: "💼",
+      title: "New Job Created",
+      description: "Backend Developer position is now open for applicants.",
+      time: "4 hrs ago",
+      read: false,
+      page: "Jobs"
+    },
+    {
+      id: 3,
+      icon: "👥",
+      title: "Candidate Application",
+      description: "Arjun Nair submitted a resume for Backend Developer.",
+      time: "1 day ago",
+      read: false,
+      page: "Candidates"
+    }
+  ]);
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  const handleMarkAllRead = () => {
+    setNotifications(notifications.map(n => ({ ...n, read: true })));
+  };
+
+  const handleNotificationClick = (noti) => {
+    setNotifications(notifications.map(n => n.id === noti.id ? { ...n, read: true } : n));
+    setActivePage(noti.page);
+    setNotiOpen(false);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+      if (notiRef.current && !notiRef.current.contains(event.target)) {
+        setNotiOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   useEffect(() => {
     // Load and apply saved theme
@@ -196,16 +256,7 @@ function App() {
 
         </nav>
 
-        <div className="upgrade-card">
-          <div className="upgrade-header">
-            <span>👑</span>
-            <h3>Upgrade to Pro</h3>
-          </div>
-          <p>
-            Unlock advanced analytics, detailed reports and more powerful features.
-          </p>
-          <button className="upgrade-btn">Upgrade Now &rarr;</button>
-        </div>
+        {/* Upgrade Box Removed */}
 
         <div className="user-card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
 
@@ -248,12 +299,50 @@ function App() {
 
           <div className="admin-box">
 
-            <div className="notification-bell">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-              </svg>
-              <span className="bell-badge">3</span>
+            <div className="notification-bell-container" ref={notiRef}>
+              <div className="notification-bell" onClick={() => setNotiOpen(!notiOpen)}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+                {unreadCount > 0 && <span className="bell-badge">{unreadCount}</span>}
+              </div>
+              {notiOpen && (
+                <div className="notifications-dropdown">
+                  <div className="notifications-header">
+                    <h4>Notifications</h4>
+                    {unreadCount > 0 && (
+                      <button className="mark-all-btn" onClick={handleMarkAllRead}>
+                        Mark all as read
+                      </button>
+                    )}
+                  </div>
+                  <div className="dropdown-divider" style={{ margin: "8px 0" }}></div>
+                  <div className="notification-list">
+                    {notifications.length === 0 ? (
+                      <div className="empty-notifications">
+                        <p>No notifications yet</p>
+                      </div>
+                    ) : (
+                      notifications.map((noti) => (
+                        <div
+                          key={noti.id}
+                          className={`notification-item-card ${noti.read ? "read" : "unread"}`}
+                          onClick={() => handleNotificationClick(noti)}
+                        >
+                          <div className="noti-icon-badge">{noti.icon}</div>
+                          <div className="noti-content">
+                            <h5>{noti.title}</h5>
+                            <p>{noti.description}</p>
+                            <span className="noti-time">{noti.time}</span>
+                          </div>
+                          {!noti.read && <span className="unread-pulse-dot"></span>}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             <button className="theme-toggle-btn" onClick={toggleTheme} title="Toggle Theme">
@@ -270,8 +359,28 @@ function App() {
               </svg>
             </button>
 
-            <div className="avatar-header" onClick={() => setActivePage("Settings")}>
-              {initials}
+            <div className="profile-dropdown-container" ref={dropdownRef}>
+              <div className="avatar-header" onClick={() => setDropdownOpen(!dropdownOpen)}>
+                {initials}
+              </div>
+              {dropdownOpen && (
+                <div className="profile-dropdown">
+                  <div className="dropdown-user-info">
+                    <div className="dropdown-avatar">{initials}</div>
+                    <div className="dropdown-user-details">
+                      <h4>{user.name}</h4>
+                      <p>{user.email}</p>
+                    </div>
+                  </div>
+                  <div className="dropdown-divider"></div>
+                  <button className="dropdown-item" onClick={() => { setActivePage("Settings"); setDropdownOpen(false); }}>
+                    ⚙️ Settings
+                  </button>
+                  <button className="dropdown-item logout" onClick={() => { handleLogout(); setDropdownOpen(false); }}>
+                    🚪 Log Out
+                  </button>
+                </div>
+              )}
             </div>
 
           </div>
