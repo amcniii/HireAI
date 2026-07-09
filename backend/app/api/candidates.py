@@ -9,7 +9,7 @@ from app.database.database import get_db
 from app.models.job import Job
 from app.models.candidate import Candidate
 from app.models.candidate_skill import CandidateSkill
-from app.schemas.candidate import CandidateStatusUpdate
+from app.schemas.candidate import CandidateStatusUpdate, CandidateCompareRequest
 
 from app.services.pdf_parser import extract_text_from_pdf
 from app.services.resume_analyzer import (
@@ -267,6 +267,51 @@ def update_candidate_status(
             "status": candidate.status
         }
     }
+
+@router.post("/compare")
+def compare_candidates(
+    request: CandidateCompareRequest,
+    db: Session = Depends(get_db)
+):
+    results = []
+    for candidate_id in request.candidate_ids:
+        candidate = db.query(Candidate).filter(Candidate.id == candidate_id).first()
+        if not candidate:
+            continue
+
+        skills = (
+            db.query(CandidateSkill)
+            .filter(CandidateSkill.candidate_id == candidate_id)
+            .all()
+        )
+
+        results.append({
+            "id": str(candidate.id),
+            "job_id": str(candidate.job_id),
+            "name": candidate.name,
+            "email": candidate.email,
+            "phone": candidate.phone,
+            "education": candidate.education,
+            "companies": candidate.companies,
+            "experience_years": candidate.experience_years,
+            "resume_file_url": candidate.resume_file_url,
+            "overall_score": candidate.overall_score,
+            "skill_score": candidate.skill_score,
+            "similarity_score": candidate.similarity_score,
+            "experience_score": candidate.experience_score,
+            "ai_summary": candidate.ai_summary,
+            "status": candidate.status,
+            "skills": [
+                {
+                    "skill": s.skill,
+                    "evidence": s.evidence,
+                    "matched": s.matched
+                }
+                for s in skills
+            ],
+            "created_at": candidate.created_at
+        })
+    return results
 
 @router.delete("/{candidate_id}")
 def delete_candidate(candidate_id: UUID, db: Session = Depends(get_db)):

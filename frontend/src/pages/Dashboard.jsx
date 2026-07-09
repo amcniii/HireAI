@@ -63,17 +63,27 @@ function Dashboard({ onNavigate }) {
     status: j.status || "Open"
   }));
 
-  const displayCandidates = candidates.map((c, idx) => ({
-    id: c.id,
-    name: c.name,
-    email: c.email || `${c.name.toLowerCase().replace(/\s+/g, '')}@email.com`,
-    overall_score: Number(c.overall_score || 75),
-    role: c.role || (idx % 2 === 0 ? "Frontend Developer" : "Data Scientist"),
-    experience_years: c.experience_years || 3,
-    skills: c.skills ? (Array.isArray(c.skills) ? c.skills : c.skills.split(',')) : ["React", "Node.js"],
-    status: c.status || "Shortlisted"
-  }));
+  const displayCandidates = candidates.map((c, idx) => {
+  const safeName = c.name || `Candidate ${idx + 1}`;
 
+  return {
+    id: c.id,
+    name: safeName,
+    email:
+      c.email ||
+      `${safeName.toLowerCase().replace(/\s+/g, "")}@email.com`,
+    overall_score: Number(c.overall_score || 75),
+    role:
+      c.role || (idx % 2 === 0 ? "Frontend Developer" : "Data Scientist"),
+    experience_years: c.experience_years || 3,
+    skills: c.skills
+      ? Array.isArray(c.skills)
+        ? c.skills
+        : c.skills.split(",")
+      : ["React", "Node.js"],
+    status: c.status || "Shortlisted",
+  };
+});
   // Stats Calculations strictly based on actual DB tables
   const totalJobsCount = jobs.length;
   const totalCandidatesCount = candidates.length;
