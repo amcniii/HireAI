@@ -24,7 +24,7 @@ export default function Settings() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   
-  // Profile settings state
+  
   const [profile, setProfile] = useState({
     name: "",
     email: "",
@@ -32,7 +32,7 @@ export default function Settings() {
     job_title: "",
   });
 
-  // Company settings state
+  
   const [company, setCompany] = useState({
     company_name: "",
     company_industry: "",
@@ -49,7 +49,7 @@ export default function Settings() {
     enable_2fa: false,
   });
 
-  // AI settings state
+  
   const [aiSettings, setAiSettings] = useState({
     ai_threshold: 80,
     ai_auto_rank: true,
