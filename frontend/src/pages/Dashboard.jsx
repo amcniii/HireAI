@@ -5,6 +5,7 @@ import API from "../services/api";
 function Dashboard({ searchQuery = "", onNavigate }) {
   const [jobs, setJobs] = useState([]);
   const [candidates, setCandidates] = useState([]);
+  const [timeRange, setTimeRange] = useState("This Week");
 
   useEffect(() => {
     fetchDashboard();
@@ -96,13 +97,41 @@ function Dashboard({ searchQuery = "", onNavigate }) {
     ? [...displayCandidates].sort((a, b) => b.overall_score - a.overall_score)[0]
     : null;
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good Morning";
+    if (hour < 17) return "Good Afternoon";
+    return "Good Evening";
+  };
+
+  const weeklyData = [
+    { label: "Mon", val: Math.max(1, Math.round(totalCandidatesCount * 0.1)), x: 30, y: 150 - Math.max(1, Math.round(totalCandidatesCount * 0.1)) * 12 },
+    { label: "Tue", val: Math.max(1, Math.round(totalCandidatesCount * 0.3)), x: 96.6, y: 150 - Math.max(1, Math.round(totalCandidatesCount * 0.3)) * 12 },
+    { label: "Wed", val: totalCandidatesCount, x: 163.3, y: 150 - totalCandidatesCount * 12 },
+    { label: "Thu", val: Math.max(1, Math.round(totalCandidatesCount * 0.8)), x: 230, y: 150 - Math.max(1, Math.round(totalCandidatesCount * 0.8)) * 12 },
+    { label: "Fri", val: Math.max(1, Math.round(totalCandidatesCount * 0.5)), x: 296.6, y: 150 - Math.max(1, Math.round(totalCandidatesCount * 0.5)) * 12 },
+    { label: "Sat", val: Math.max(1, Math.round(totalCandidatesCount * 0.4)), x: 363.3, y: 150 - Math.max(1, Math.round(totalCandidatesCount * 0.4)) * 12 },
+    { label: "Sun", val: Math.max(1, Math.round(totalCandidatesCount * 0.2)), x: 430, y: 150 - Math.max(1, Math.round(totalCandidatesCount * 0.2)) * 12 }
+  ];
+
+  const monthlyData = [
+    { label: "Week 1", val: Math.max(1, Math.round(totalCandidatesCount * 0.4)), x: 30, y: 150 - Math.max(1, Math.round(totalCandidatesCount * 0.4)) * 12 },
+    { label: "Week 2", val: Math.max(2, Math.round(totalCandidatesCount * 0.7)), x: 163.3, y: 150 - Math.max(2, Math.round(totalCandidatesCount * 0.7)) * 12 },
+    { label: "Week 3", val: Math.max(3, Math.round(totalCandidatesCount * 1.2)), x: 296.6, y: 150 - Math.max(3, Math.round(totalCandidatesCount * 1.2)) * 12 },
+    { label: "Week 4", val: totalCandidatesCount, x: 430, y: 150 - totalCandidatesCount * 12 }
+  ];
+
+  const chartData = timeRange === "This Week" ? weeklyData : monthlyData;
+  const pathD = chartData.map((d, i) => `${i === 0 ? 'M' : 'L'} ${d.x} ${d.y}`).join(" ");
+  const areaD = `${pathD} L ${chartData[chartData.length - 1].x} 150 L ${chartData[0].x} 150 Z`;
+
   return (
     <div className="dashboard-page">
       
       {/* 1. HERO SECTION */}
       <section className="hero">
         <div className="hero-left">
-          <span className="hero-tag">Good Evening, HR Admin 👋</span>
+          <span className="hero-tag">{getGreeting()}, HR Admin 👋</span>
           <h1>Welcome back!</h1>
           <p>
             Manage jobs, upload resumes, compare candidates and track AI-based hiring performance from one place.
@@ -305,9 +334,9 @@ function Dashboard({ searchQuery = "", onNavigate }) {
         <div className="panel chart-panel">
           <div className="panel-header">
             <h3>Hiring Activity</h3>
-            <select className="chart-select">
-              <option>This Week</option>
-              <option>This Month</option>
+            <select className="chart-select" value={timeRange} onChange={(e) => setTimeRange(e.target.value)}>
+              <option value="This Week">This Week</option>
+              <option value="This Month">This Month</option>
             </select>
           </div>
           <div className="chart-container">
@@ -329,29 +358,15 @@ function Dashboard({ searchQuery = "", onNavigate }) {
 
               {totalCandidatesCount > 0 ? (
                 <>
-                  <path d="M 30 150 L 30 132 L 96.6 105 L 163.3 78 L 230 96 L 296.6 114 L 363.3 123 L 430 132 L 430 150 Z" fill="url(#chartGrad)" />
-                  <path d="M 30 132 L 96.6 105 L 163.3 78 L 230 96 L 296.6 114 L 363.3 123 L 430 132" fill="none" stroke="#4f46e5" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d={areaD} fill="url(#chartGrad)" />
+                  <path d={pathD} fill="none" stroke="#4f46e5" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
 
-                  <circle cx="30" cy="132" r="4.5" fill="#4f46e5" stroke="#ffffff" strokeWidth="1.5" />
-                  <text x="30" y="122" fontSize="9" fontWeight="bold" fill="#4f46e5" textAnchor="middle">{Math.max(1, Math.round(totalCandidatesCount * 0.1))}</text>
-
-                  <circle cx="96.6" cy="105" r="4.5" fill="#4f46e5" stroke="#ffffff" strokeWidth="1.5" />
-                  <text x="96.6" y="95" fontSize="9" fontWeight="bold" fill="#4f46e5" textAnchor="middle">{Math.max(1, Math.round(totalCandidatesCount * 0.3))}</text>
-
-                  <circle cx="163.3" cy="78" r="4.5" fill="#4f46e5" stroke="#ffffff" strokeWidth="1.5" />
-                  <text x="163.3" y="68" fontSize="9" fontWeight="bold" fill="#4f46e5" textAnchor="middle">{totalCandidatesCount}</text>
-
-                  <circle cx="230" cy="96" r="4.5" fill="#4f46e5" stroke="#ffffff" strokeWidth="1.5" />
-                  <text x="230" y="86" fontSize="9" fontWeight="bold" fill="#4f46e5" textAnchor="middle">{Math.max(1, Math.round(totalCandidatesCount * 0.8))}</text>
-
-                  <circle cx="296.6" cy="114" r="4.5" fill="#4f46e5" stroke="#ffffff" strokeWidth="1.5" />
-                  <text x="296.6" y="104" fontSize="9" fontWeight="bold" fill="#4f46e5" textAnchor="middle">{Math.max(1, Math.round(totalCandidatesCount * 0.5))}</text>
-
-                  <circle cx="363.3" cy="123" r="4.5" fill="#4f46e5" stroke="#ffffff" strokeWidth="1.5" />
-                  <text x="363.3" y="113" fontSize="9" fontWeight="bold" fill="#4f46e5" textAnchor="middle">{Math.max(1, Math.round(totalCandidatesCount * 0.4))}</text>
-
-                  <circle cx="430" cy="132" r="4.5" fill="#4f46e5" stroke="#ffffff" strokeWidth="1.5" />
-                  <text x="430" y="122" fontSize="9" fontWeight="bold" fill="#4f46e5" textAnchor="middle">{Math.max(1, Math.round(totalCandidatesCount * 0.2))}</text>
+                  {chartData.map((d, idx) => (
+                    <g key={idx}>
+                      <circle cx={d.x} cy={d.y} r="4.5" fill="#4f46e5" stroke="#ffffff" strokeWidth="1.5" />
+                      <text x={d.x} y={d.y - 10} fontSize="9" fontWeight="bold" fill="#4f46e5" textAnchor="middle">{d.val}</text>
+                    </g>
+                  ))}
                 </>
               ) : (
                 <>
@@ -360,13 +375,9 @@ function Dashboard({ searchQuery = "", onNavigate }) {
                 </>
               )}
 
-              <text x="30" y="168" fontSize="9" fill="var(--text-secondary)" textAnchor="middle">Mon</text>
-              <text x="96.6" y="168" fontSize="9" fill="var(--text-secondary)" textAnchor="middle">Tue</text>
-              <text x="163.3" y="168" fontSize="9" fill="var(--text-secondary)" textAnchor="middle">Wed</text>
-              <text x="230" y="168" fontSize="9" fill="var(--text-secondary)" textAnchor="middle">Thu</text>
-              <text x="296.6" y="168" fontSize="9" fill="var(--text-secondary)" textAnchor="middle">Fri</text>
-              <text x="363.3" y="168" fontSize="9" fill="var(--text-secondary)" textAnchor="middle">Sat</text>
-              <text x="430" y="168" fontSize="9" fill="var(--text-secondary)" textAnchor="middle">Sun</text>
+              {chartData.map((d, idx) => (
+                <text key={idx} x={d.x} y="168" fontSize="9" fill="var(--text-secondary)" textAnchor="middle">{d.label}</text>
+              ))}
             </svg>
           </div>
         </div>
