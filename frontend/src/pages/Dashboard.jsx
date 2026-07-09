@@ -1,6 +1,17 @@
 import { useEffect, useState } from "react";
 import "../styles/dashboard.css";
 import API from "../services/api";
+import {
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 function Dashboard({ searchQuery = "", onNavigate }) {
   const [jobs, setJobs] = useState([]);
@@ -96,6 +107,25 @@ function Dashboard({ searchQuery = "", onNavigate }) {
   const topMatchCandidate = displayCandidates.length > 0
     ? [...displayCandidates].sort((a, b) => b.overall_score - a.overall_score)[0]
     : null;
+
+  const scoreData = displayCandidates.map((candidate) => ({
+    name: candidate.name || "Unknown",
+    score: Number(candidate.overall_score || 0),
+  }));
+
+  const skillData = [
+    { name: "Python", value: 35 },
+    { name: "React", value: 25 },
+    { name: "FastAPI", value: 20 },
+    { name: "SQL", value: 20 },
+  ];
+
+  const jobData = jobs.map((job) => ({
+    name: job.title,
+    candidates: candidates.filter((c) => c.job_id === job.id).length,
+  }));
+
+  const COLORS = ["#7C3AED", "#2563EB", "#22C55E", "#F97316"];
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -424,18 +454,6 @@ function Dashboard({ searchQuery = "", onNavigate }) {
                 <p>Compare candidates</p>
               </div>
             </div>
-            <div className="action-card" onClick={() => onNavigate("Analytics")}>
-              <div className="action-circle orange">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
-                  <path d="M22 12A10 10 0 0 0 12 2v10z" />
-                </svg>
-              </div>
-              <div className="action-text">
-                <h5>View Analytics</h5>
-                <p>View hiring insights</p>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -496,88 +514,115 @@ function Dashboard({ searchQuery = "", onNavigate }) {
           </div>
         </div>
 
-        {/* Upcoming Interviews */}
-        <div className="panel interviews-panel">
-          <div className="panel-header">
-            <h3>Upcoming Interviews</h3>
-            <button className="view-all-link" onClick={() => onNavigate("Candidates")}>View All</button>
-          </div>
-          <div className="interviews-list">
-            {displayCandidates.slice(0, 2).map((cand, idx) => (
-              <div className="interview-slot" key={cand.id}>
-                <div className="date-block">
-                  <span className="day">28</span>
-                  <span className="month">Jul</span>
-                </div>
-                <div className="details">
-                  <h5>{cand.role}</h5>
-                  <p>{cand.name} &bull; {idx === 0 ? "10:00 AM" : "02:00 PM"}</p>
-                  <span className="link">Google Meet</span>
-                </div>
-              </div>
-            ))}
-            {totalCandidatesCount === 0 && (
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, minHeight: "100px", color: "var(--muted)", fontSize: "12px", textAlign: "center" }}>
-                No interviews scheduled.
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Recent Activity */}
-        <div className="panel activity-panel">
-          <div className="panel-header">
-            <h3>Recent Activity</h3>
-            <button className="view-all-link" onClick={() => onNavigate("Candidates")}>View All</button>
-          </div>
-          <div className="activity-feed">
-            {(() => {
-              const activities = [];
-              if (displayCandidates.length > 0) {
-                const c1 = displayCandidates[0];
-                activities.push({
-                  icon: "📄",
-                  type: "upload",
-                  text: <p><strong>{c1.name}</strong> uploaded a resume</p>,
-                  time: "5 min ago"
-                });
-                activities.push({
-                  icon: "🔍",
-                  type: "analyze",
-                  text: <p>{c1.name} resume analyzed</p>,
-                  time: "10 min ago"
-                });
-              }
-              if (displayJobs.length > 0) {
-                const j1 = displayJobs[0];
-                activities.push({
-                  icon: "💼",
-                  type: "job",
-                  text: <p>New job "{j1.title}" has been created</p>,
-                  time: "30 min ago"
-                });
-              }
-              if (activities.length === 0) {
-                return (
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, minHeight: "120px", color: "var(--muted)", fontSize: "12px", textAlign: "center" }}>
-                    No recent activity logged.
-                  </div>
-                );
-              }
-              return activities.map((act, i) => (
-                <div className="feed-item" key={i}>
-                  <div className={`icon-badge ${act.type}`}>{act.icon}</div>
-                  <div className="text-box">
-                    {act.text}
-                    <span className="time">{act.time}</span>
-                  </div>
-                </div>
-              ));
-            })()}
-          </div>
-        </div>
-
       </section>
+
+      {/* 5. SYSTEM ANALYTICS SECTION */}
+      <h2 style={{ marginTop: "30px", marginBottom: "15px", fontWeight: "800", color: "var(--text-primary)" }}>System Analytics</h2>
+      <section className="grid-row-3" style={{ marginBottom: "20px" }}>
+        {/* Candidate Score Overview */}
+        <div className="panel" style={{ minHeight: "340px" }}>
+          <h3>Candidate Score Overview</h3>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={scoreData} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
+              <XAxis dataKey="name" tick={{ fill: "var(--text-secondary)", fontSize: 11 }} />
+              <YAxis tick={{ fill: "var(--text-secondary)", fontSize: 11 }} />
+              <Tooltip cursor={{ fill: "rgba(0,0,0,0.02)" }} />
+              <Bar dataKey="score" radius={[8, 8, 0, 0]}>
+                {scoreData.map((entry, index) => (
+                  <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Skills Breakdown */}
+        <div className="panel" style={{ minHeight: "340px", alignItems: "center" }}>
+          <h3>Skills Breakdown</h3>
+          <ResponsiveContainer width="100%" height={200}>
+            <PieChart>
+              <Pie
+                data={skillData}
+                dataKey="value"
+                nameKey="name"
+                innerRadius={50}
+                outerRadius={80}
+                paddingAngle={3}
+                label
+              >
+                {skillData.map((entry, index) => (
+                  <Cell key={entry.name} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="skill-legend" style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "10px", justifyContent: "center" }}>
+            {skillData.map((skill, index) => (
+              <p key={skill.name} style={{ display: "flex", alignItems: "center", gap: "4px", margin: 0, fontSize: "11px" }}>
+                <span style={{ display: "inline-block", width: "8px", height: "8px", borderRadius: "50%", background: COLORS[index] }}></span>
+                {skill.name} ({skill.value}%)
+              </p>
+            ))}
+          </div>
+        </div>
+
+        {/* Job-wise Candidates */}
+        <div className="panel" style={{ minHeight: "340px" }}>
+          <h3>Job-wise Candidates</h3>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={jobData} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
+              <XAxis dataKey="name" tick={{ fill: "var(--text-secondary)", fontSize: 11 }} />
+              <YAxis tick={{ fill: "var(--text-secondary)", fontSize: 11 }} />
+              <Tooltip cursor={{ fill: "rgba(0,0,0,0.02)" }} />
+              <Bar dataKey="candidates" radius={[8, 8, 0, 0]}>
+                {jobData.map((entry, index) => (
+                  <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </section>
+
+      {/* Recent Uploads Table */}
+      <div className="panel" style={{ marginBottom: "30px" }}>
+        <h3>Recent Uploads</h3>
+        <div className="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Candidate</th>
+                <th>Email</th>
+                <th>Score</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {displayCandidates.length === 0 ? (
+                <tr>
+                  <td colSpan="4" style={{ textAlign: "center", padding: "20px 10px", color: "var(--muted)", fontSize: "13px" }}>
+                    No candidates screened yet.
+                  </td>
+                </tr>
+              ) : (
+                displayCandidates.slice(0, 5).map((candidate) => (
+                  <tr key={candidate.id}>
+                    <td style={{ fontWeight: "600" }}>{candidate.name}</td>
+                    <td>{candidate.email}</td>
+                    <td><strong style={{ color: "#7C3AED" }}>{candidate.overall_score}%</strong></td>
+                    <td>
+                      <span className="badge open" style={{ background: "#ede9fe", color: "#7C3AED" }}>
+                        {candidate.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
     </div>
   );

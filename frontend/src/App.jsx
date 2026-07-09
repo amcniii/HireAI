@@ -171,27 +171,6 @@ function App() {
       ),
     },
     {
-      id: "Compare",
-      label: "Compare",
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="18" y1="20" x2="18" y2="10" />
-          <line x1="12" y1="20" x2="12" y2="4" />
-          <line x1="6" y1="20" x2="6" y2="14" />
-        </svg>
-      ),
-    },
-    {
-      id: "Analytics",
-      label: "Analytics",
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
-          <path d="M22 12A10 10 0 0 0 12 2v10z" />
-        </svg>
-      ),
-    },
-    {
       id: "Settings",
       label: "Settings",
       icon: (
@@ -387,11 +366,11 @@ function App() {
         {activePage === "Candidates" && <Candidates searchQuery={searchQuery} />}
         {activePage === "Upload Resume" && <UploadResumePreview />}
 
-
+        {/* Commented out Compare and Analytics pages as requested */}
+        {/*
         {activePage === "Compare" && <Compare searchQuery={searchQuery} />}
-
-
         {activePage === "Analytics" && <Analytics />}
+        */}
 
         {activePage === "Settings" && <Settings />}
 
@@ -416,6 +395,98 @@ function JobsPreview({ searchQuery }) {
     optional_skills: "",
     minimum_experience: "",
   });
+
+  const [uploadingJob, setUploadingJob] = useState(null);
+  const [uploadQueue, setUploadQueue] = useState([]);
+  const [uploadProgress, setUploadProgress] = useState({ processed: 0, total: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleUploadClick = (job) => {
+    setUploadingJob(job);
+    setUploadQueue([]);
+    setUploadProgress({ processed: 0, total: 0 });
+    setIsProcessing(false);
+  };
+
+  const handleFileDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (isProcessing) return;
+    const droppedFiles = Array.from(e.dataTransfer.files).filter(
+      (f) => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf")
+    );
+    addFilesToQueue(droppedFiles);
+  };
+
+  const handleBatchFileChange = (e) => {
+    const selectedFiles = Array.from(e.target.files);
+    addFilesToQueue(selectedFiles);
+  };
+
+  const addFilesToQueue = (newFiles) => {
+    const combinedCount = uploadQueue.length + newFiles.length;
+    let filesToAdd = newFiles;
+    if (combinedCount > 50) {
+      setMessage("⚠️ Maximum limit is 50 resumes. Only the first 50 files will be queued.");
+      filesToAdd = newFiles.slice(0, 50 - uploadQueue.length);
+    }
+    const newItems = filesToAdd.map((file) => ({
+      file,
+      status: "queued",
+      score: null,
+    }));
+    setUploadQueue([...uploadQueue, ...newItems]);
+  };
+
+  const handleRemoveFromQueue = (index) => {
+    setUploadQueue(uploadQueue.filter((_, idx) => idx !== index));
+  };
+
+  const handleStartBatchProcessing = async () => {
+    if (uploadQueue.length === 0) return;
+    setIsProcessing(true);
+    setUploadProgress({ processed: 0, total: uploadQueue.length });
+
+    for (let i = 0; i < uploadQueue.length; i++) {
+      setUploadQueue((prev) =>
+        prev.map((item, idx) => (idx === i ? { ...item, status: "processing" } : item))
+      );
+
+      const item = uploadQueue[i];
+      const formData = new FormData();
+      formData.append("file", item.file);
+
+      let status = "done";
+      let score = 0;
+
+      try {
+        const response = await API.post(
+          `/candidates/jobs/${uploadingJob.id}/upload-resume`,
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+        score = response.data.overall_score || 0;
+      } catch (err) {
+        console.error(err);
+        status = "error";
+      }
+
+      setUploadQueue((prev) =>
+        prev.map((item, idx) => (idx === i ? { ...item, status, score } : item))
+      );
+      setUploadProgress((prev) => ({ ...prev, processed: i + 1 }));
+
+      if (i < uploadQueue.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    }
+    setIsProcessing(false);
+  };
 
   const handleEditClick = (job) => {
     setEditingJob(job);
@@ -694,6 +765,8 @@ function JobsPreview({ searchQuery }) {
           </div>
         </div>
       )}
+
+      {/* uploadingJob modal removed as upload resides fully in Upload Resume page */}
     </section>
   );
 }
@@ -886,9 +959,16 @@ function CandidatesPreview() {
 function UploadResumePreview() {
   const [jobs, setJobs] = useState([]);
   const [jobId, setJobId] = useState("");
-  const [file, setFile] = useState(null);
-  const [result, setResult] = useState(null);
+  const [uploadQueue, setUploadQueue] = useState([]);
+  const [uploadProgress, setUploadProgress] = useState({ processed: 0, total: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [message, setMessage] = useState("");
+  const [results, setResults] = useState([]);
+
+  useEffect(() => {
+    fetchJobs();
+  }, []);
 
   const fetchJobs = async () => {
     try {
@@ -901,48 +981,115 @@ function UploadResumePreview() {
     }
   };
 
-  const handleUpload = async () => {
-    if (!jobId || !file) {
-      setMessage("❌ Please select a job and choose a PDF file.");
+  const handleFileDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (isProcessing) return;
+    const droppedFiles = Array.from(e.dataTransfer.files).filter(
+      (f) => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf")
+    );
+    addFilesToQueue(droppedFiles);
+  };
+
+  const handleBatchFileChange = (e) => {
+    const selectedFiles = Array.from(e.target.files);
+    addFilesToQueue(selectedFiles);
+  };
+
+  const addFilesToQueue = (newFiles) => {
+    const combinedCount = uploadQueue.length + newFiles.length;
+    let filesToAdd = newFiles;
+    if (combinedCount > 10) {
+      setMessage("⚠️ You can upload a maximum of 10 resumes at a time.");
+      filesToAdd = newFiles.slice(0, 10 - uploadQueue.length);
+    } else {
+      setMessage("");
+    }
+    const newItems = filesToAdd.map((file) => ({
+      file,
+      status: "queued",
+      score: null,
+      details: null
+    }));
+    setUploadQueue([...uploadQueue, ...newItems]);
+    setResults([]);
+  };
+
+  const handleRemoveFromQueue = (index) => {
+    setUploadQueue(uploadQueue.filter((_, idx) => idx !== index));
+  };
+
+  const handleStartBatchProcessing = async () => {
+    if (!jobId) {
+      setMessage("❌ Please select a job role first.");
       return;
     }
+    if (uploadQueue.length === 0) return;
 
-    try {
-      setMessage("Uploading and analyzing resume...");
+    setIsProcessing(true);
+    setResults([]);
+    setUploadProgress({ processed: 0, total: uploadQueue.length });
 
-      const formData = new FormData();
-      formData.append("file", file);
+    const screenResults = [];
 
-      const response = await API.post(
-        `/candidates/jobs/${jobId}/upload-resume`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
+    for (let i = 0; i < uploadQueue.length; i++) {
+      setUploadQueue((prev) =>
+        prev.map((item, idx) => (idx === i ? { ...item, status: "processing" } : item))
       );
 
-      setResult(response.data);
-      setMessage("✅ Resume uploaded and analyzed successfully");
-    } catch (error) {
-      console.error(error);
-      setMessage("❌ Resume upload failed.");
+      const item = uploadQueue[i];
+      const formData = new FormData();
+      formData.append("file", item.file);
+
+      let status = "done";
+      let score = 0;
+      let data = null;
+
+      try {
+        const response = await API.post(
+          `/candidates/jobs/${jobId}/upload-resume`,
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+        data = response.data;
+        score = response.data.overall_score || 0;
+        screenResults.push(data);
+      } catch (err) {
+        console.error(err);
+        status = "error";
+      }
+
+      setUploadQueue((prev) =>
+        prev.map((item, idx) => (idx === i ? { ...item, status, score, details: data } : item))
+      );
+      setUploadProgress((prev) => ({ ...prev, processed: i + 1 }));
+
+      if (i < uploadQueue.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
     }
+
+    setResults(screenResults);
+    setIsProcessing(false);
+    setMessage(`✅ Successfully screened ${screenResults.length} resumes!`);
   };
 
   return (
     <section className="placeholder-page">
       <div className="panel">
-        <h1>Upload Resume</h1>
-        <p>Select a job and upload a PDF resume for AI scoring.</p>
+        <h1>Upload Resumes</h1>
+        <p>Select a job role and drag-and-drop up to 10 resumes for real-time AI screening.</p>
 
         <div className="mini-section">
           <button className="primary-btn" onClick={fetchJobs}>
             Load Jobs
           </button>
 
-          <select value={jobId} onChange={(e) => setJobId(e.target.value)}>
+          <select value={jobId} onChange={(e) => setJobId(e.target.value)} disabled={isProcessing}>
             <option value="">Select Job</option>
             {jobs.map((job) => (
               <option key={job.id} value={job.id}>
@@ -951,27 +1098,260 @@ function UploadResumePreview() {
             ))}
           </select>
 
-          <input
-            type="file"
-            accept="application/pdf"
-            onChange={(e) => setFile(e.target.files[0])}
-          />
+          {/* Drag & Drop Zone */}
+          {!isProcessing && (
+            <div
+              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handleFileDrop}
+              style={{
+                border: isDragging ? "2px dashed #7C3AED" : "2px dashed var(--border)",
+                backgroundColor: isDragging ? "rgba(124, 58, 237, 0.05)" : "var(--bg)",
+                borderRadius: "8px",
+                padding: "30px 20px",
+                textAlign: "center",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+                margin: "20px 0"
+              }}
+              onClick={() => document.getElementById("page-batch-file-input").click()}
+            >
+              <input
+                id="page-batch-file-input"
+                type="file"
+                multiple
+                accept="application/pdf"
+                onChange={handleBatchFileChange}
+                style={{ display: "none" }}
+              />
+              <span style={{ fontSize: "32px", display: "block", marginBottom: "8px" }}>📤</span>
+              <strong style={{ fontSize: "14px", display: "block", marginBottom: "4px" }}>
+                Drag & Drop resumes here or click to browse
+              </strong>
+              <small style={{ color: "var(--muted)", fontSize: "12px" }}>Supports up to 10 PDF resumes at a time</small>
+            </div>
+          )}
 
-          <button className="primary-btn" onClick={handleUpload}>
-            Upload Resume
-          </button>
+          {/* Queue List / Progress Bar */}
+          {uploadQueue.length > 0 && (
+            <div style={{ marginTop: "16px", marginBottom: "20px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                <h4 style={{ margin: 0, fontWeight: "700", fontSize: "14px" }}>
+                  Resumes Queue ({uploadQueue.length})
+                </h4>
+                {isProcessing && (
+                  <small style={{ fontWeight: "700", color: "#7C3AED" }}>
+                    Screening: {uploadProgress.processed} / {uploadProgress.total}
+                  </small>
+                )}
+              </div>
+
+              {isProcessing && (
+                <div style={{ width: "100%", height: "8px", backgroundColor: "var(--border)", borderRadius: "4px", overflow: "hidden", marginBottom: "16px" }}>
+                  <div style={{
+                    width: `${(uploadProgress.processed / uploadProgress.total) * 100}%`,
+                    height: "100%",
+                    backgroundColor: "#7C3AED",
+                    transition: "width 0.4s ease"
+                  }} />
+                </div>
+              )}
+
+              <div style={{ maxHeight: "220px", overflowY: "auto", border: "1px solid var(--border)", borderRadius: "8px" }}>
+                <table style={{ margin: 0, width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ backgroundColor: "var(--bg)", borderBottom: "1px solid var(--border)" }}>
+                      <th style={{ padding: "8px", textAlign: "left", fontSize: "11px" }}>File Name</th>
+                      <th style={{ padding: "8px", textAlign: "right", fontSize: "11px", width: "80px" }}>Size</th>
+                      <th style={{ padding: "8px", textAlign: "center", fontSize: "11px", width: "130px" }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {uploadQueue.map((item, idx) => (
+                      <tr key={idx} style={{ borderBottom: "1px solid var(--border)", fontSize: "12px" }}>
+                        <td style={{ padding: "8px", fontWeight: "600", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "250px" }}>
+                          {item.file.name}
+                        </td>
+                        <td style={{ padding: "8px", textAlign: "right", color: "var(--muted)" }}>
+                          {(item.file.size / 1024).toFixed(0)} KB
+                        </td>
+                        <td style={{ padding: "8px", textAlign: "center" }}>
+                          {item.status === "queued" && (
+                            <span style={{ padding: "2px 6px", borderRadius: "12px", backgroundColor: "#E5E7EB", color: "#4B5563", fontSize: "10px", fontWeight: "700" }}>
+                              Queued
+                            </span>
+                          )}
+                          {item.status === "processing" && (
+                            <span style={{ padding: "2px 6px", borderRadius: "12px", backgroundColor: "#DBEAFE", color: "#1E40AF", fontSize: "10px", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                              <span style={{ display: "inline-block", width: "6px", height: "6px", border: "1.5px solid #1E40AF", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }}></span>
+                              Screening...
+                            </span>
+                          )}
+                          {item.status === "done" && (
+                            <span style={{ padding: "2px 6px", borderRadius: "12px", backgroundColor: "#DEF7EC", color: "#03543F", fontSize: "10px", fontWeight: "800" }}>
+                              Done: {item.score}%
+                            </span>
+                          )}
+                          {item.status === "error" && (
+                            <span style={{ padding: "2px 6px", borderRadius: "12px", backgroundColor: "#FDE8E8", color: "#9B1C1C", fontSize: "10px", fontWeight: "700" }}>
+                              ⚠️ Failed
+                            </span>
+                          )}
+                          {item.status === "queued" && !isProcessing && (
+                            <button
+                              onClick={() => handleRemoveFromQueue(idx)}
+                              style={{
+                                background: "transparent",
+                                border: "none",
+                                color: "#EF4444",
+                                cursor: "pointer",
+                                marginLeft: "8px",
+                                fontSize: "12px",
+                                padding: "0"
+                              }}
+                              title="Remove file"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {!isProcessing && (
+                <div style={{ display: "flex", gap: "8px", marginTop: "16px", justifyContent: "flex-end" }}>
+                  <button
+                    className="secondary-btn"
+                    onClick={() => setUploadQueue([])}
+                    style={{ padding: "8px 16px" }}
+                  >
+                    Clear All
+                  </button>
+                  <button
+                    className="primary-btn"
+                    onClick={handleStartBatchProcessing}
+                    style={{ padding: "8px 16px", backgroundColor: "#7C3AED", borderColor: "#7C3AED" }}
+                  >
+                    Start Screening
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {message && <p className="form-message">{message}</p>}
 
-          {result && (
-            <div className="empty-state">
-              <h3>Analysis Result</h3>
-              <p><strong>Name:</strong> {result.name || "Unknown"}</p>
-              <p><strong>Email:</strong> {result.email || "Not found"}</p>
-              <p><strong>Skill Score:</strong> {result.skill_score}</p>
-              <p><strong>Similarity Score:</strong> {result.similarity_score}</p>
-              <p><strong>Experience Score:</strong> {result.experience_score}</p>
-              <p><strong>Overall Score:</strong> {result.overall_score}</p>
+          {results.length > 0 && (
+            <div style={{ marginTop: "30px" }}>
+              <h3 style={{ marginBottom: "15px", fontWeight: "800" }}>Analysis Results ({results.length})</h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+                {[...results]
+                  .sort((a, b) => b.overall_score - a.overall_score)
+                  .map((res, index) => {
+                    const isBestMatch = index === 0 && results.length > 1;
+                    return (
+                      <div
+                        key={res.candidate_id || index}
+                        style={{
+                          padding: "20px",
+                          borderRadius: "16px",
+                          border: isBestMatch ? "2px solid #7C3AED" : "1px solid var(--border)",
+                          background: isBestMatch
+                            ? "linear-gradient(135deg, #ffffff, #f5f3ff)"
+                            : "var(--card-solid)",
+                          boxShadow: isBestMatch ? "0 4px 20px rgba(124, 58, 237, 0.15)" : "none",
+                          position: "relative",
+                          transition: "all 0.3s ease"
+                        }}
+                      >
+                        {isBestMatch && (
+                          <span
+                            style={{
+                              position: "absolute",
+                              top: "12px",
+                              right: "15px",
+                              background: "#7C3AED",
+                              color: "white",
+                              padding: "4px 10px",
+                              borderRadius: "20px",
+                              fontSize: "11px",
+                              fontWeight: "800",
+                              boxShadow: "0 2px 10px rgba(124, 58, 237, 0.3)"
+                            }}
+                          >
+                            🏆 Best Match
+                          </span>
+                        )}
+
+                        <h4
+                          style={{
+                            margin: "0 0 4px 0",
+                            fontSize: "18px",
+                            color: isBestMatch ? "#7C3AED" : "inherit",
+                            fontWeight: "800"
+                          }}
+                        >
+                          {res.name || "Unknown"}
+                        </h4>
+                        <p style={{ margin: "0 0 12px 0", fontSize: "13px", color: "var(--muted)" }}>
+                          {res.email || "No email"}
+                        </p>
+
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "repeat(4, 1fr)",
+                            gap: "10px",
+                            textAlign: "center"
+                          }}
+                        >
+                          <div style={{ background: "rgba(0,0,0,0.02)", padding: "8px", borderRadius: "8px" }}>
+                            <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>
+                              Skill Match
+                            </small>
+                            <strong style={{ fontSize: "13px" }}>{res.skill_score}%</strong>
+                          </div>
+                          <div style={{ background: "rgba(0,0,0,0.02)", padding: "8px", borderRadius: "8px" }}>
+                            <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>
+                              Similarity
+                            </small>
+                            <strong style={{ fontSize: "13px" }}>{res.similarity_score}%</strong>
+                          </div>
+                          <div style={{ background: "rgba(0,0,0,0.02)", padding: "8px", borderRadius: "8px" }}>
+                            <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>
+                              Experience
+                            </small>
+                            <strong style={{ fontSize: "13px" }}>{res.experience_years} Yrs</strong>
+                          </div>
+                          <div
+                            style={{
+                              background: isBestMatch ? "#ede9fe" : "rgba(124, 58, 237, 0.1)",
+                              padding: "8px",
+                              borderRadius: "8px"
+                            }}
+                          >
+                            <small
+                              style={{
+                                display: "block",
+                                color: "#7C3AED",
+                                fontSize: "10px",
+                                fontWeight: "700"
+                              }}
+                            >
+                              Overall Score
+                            </small>
+                            <strong style={{ fontSize: "14px", color: "#7C3AED", fontWeight: "900" }}>
+                              {res.overall_score}%
+                            </strong>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
             </div>
           )}
         </div>
