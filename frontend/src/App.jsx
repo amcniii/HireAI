@@ -6,8 +6,8 @@ import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import Candidates from "./pages/Candidates";
 
-import Compare from "./pages/Compare";
-import Analytics from "./pages/Analytics";
+// import Compare from "./pages/Compare";
+// import Analytics from "./pages/Analytics";
 
 function App() {
   const [activePage, setActivePage] = useState("Dashboard");
