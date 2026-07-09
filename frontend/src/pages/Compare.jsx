@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import API from "../services/api";
 import CompareTable from "../components/CompareTable";
+import { formatExperience } from "../utils/format";
 
 export default function Compare() {
   const [candidates, setCandidates] = useState([]);
@@ -70,8 +71,8 @@ export default function Compare() {
 
   const handleCheckboxChange = (id, checked) => {
     if (checked) {
-      if (selectedIds.length >= 3) {
-        alert("You can compare a maximum of 3 candidates.");
+      if (selectedIds.length >= 5) {
+        alert("You can compare a maximum of 5 candidates.");
         return;
       }
       setSelectedIds([...selectedIds, id]);
@@ -81,8 +82,8 @@ export default function Compare() {
   };
 
   const handleCompareSelected = async () => {
-    if (selectedIds.length < 2 || selectedIds.length > 3) {
-      alert("Please select 2 or 3 candidates to compare.");
+    if (selectedIds.length < 2 || selectedIds.length > 5) {
+      alert("Please select 2 to 5 candidates to compare.");
       return;
     }
 
@@ -113,7 +114,7 @@ export default function Compare() {
             <p>
               {viewMode === "compare"
                 ? "Compare strengths, skills, and backgrounds side-by-side."
-                : "Select 2 or 3 candidates from the table below to compare."}
+                : "Select 2 to 5 candidates from the table below to compare."}
             </p>
           </div>
 
@@ -133,7 +134,7 @@ export default function Compare() {
                     cursor: selectedIds.length < 2 ? "not-allowed" : "pointer"
                   }}
                 >
-                  Compare Selected ({selectedIds.length}/3)
+                  Compare Selected ({selectedIds.length}/5)
                 </button>
                 <button className="secondary-btn" onClick={loadCandidates}>
                   Refresh
@@ -199,7 +200,7 @@ export default function Compare() {
                       <td>{candidate.similarity_score}%</td>
                       <td>
                         {candidate.experience_years
-                          ? `${candidate.experience_years} years`
+                          ? formatExperience(candidate.experience_years)
                           : candidate.experience_score}
                       </td>
                       <td><strong>{candidate.overall_score}%</strong></td>

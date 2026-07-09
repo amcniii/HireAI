@@ -1,9 +1,12 @@
+import os
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from uuid import UUID
 
 from app.database.database import get_db
 from app.models.job import Job
+from app.models.candidate import Candidate
+from app.models.candidate_skill import CandidateSkill
 from app.schemas.job import JobCreate, JobUpdate
 
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
@@ -117,6 +120,24 @@ def delete_job(job_id: UUID, db: Session = Depends(get_db)):
 
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
+
+    # Cascade delete all candidates under this job
+    candidates = db.query(Candidate).filter(Candidate.job_id == job_id).all()
+    for candidate in candidates:
+        # Delete candidate skills
+        db.query(CandidateSkill).filter(
+            CandidateSkill.candidate_id == candidate.id
+        ).delete(synchronize_session=False)
+
+        # Delete resume file
+        if candidate.resume_file_url and os.path.exists(candidate.resume_file_url):
+            try:
+                os.remove(candidate.resume_file_url)
+            except Exception:
+                pass
+
+        # Delete candidate
+        db.delete(candidate)
 
     db.delete(job)
     db.commit()

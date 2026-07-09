@@ -1,4 +1,5 @@
 import React from "react";
+import { formatExperience } from "../utils/format";
 
 export default function CompareTable({ comparisonData }) {
   const renderJSONList = (data) => {
@@ -11,7 +12,11 @@ export default function CompareTable({ comparisonData }) {
           {data.map((item, idx) => {
             if (typeof item === "string") return <li key={idx}>{item}</li>;
             const displayText = item.degree || item.school || item.company || item.role || JSON.stringify(item);
-            const subText = (item.degree && item.school) ? `${item.degree} at ${item.school}` : "";
+            const subText = (item.degree && item.school) 
+              ? `${item.degree} at ${item.school}` 
+              : (item.role && item.company)
+                ? `${item.role} at ${item.company}`
+                : "";
             return <li key={idx}>{subText || displayText}</li>;
           })}
         </ul>
@@ -84,7 +89,7 @@ export default function CompareTable({ comparisonData }) {
             {comparisonData.map((cand) => (
               <td key={cand.id} style={{ padding: "12px", textAlign: "center" }}>
                 <div style={{ fontSize: "14px", fontWeight: "bold" }}>
-                  {cand.experience_years > 0 ? `${cand.experience_years} Years` : (cand.companies && cand.companies.length > 0) ? "Has Experience" : "No experience record"}
+                  {cand.experience_years > 0 ? formatExperience(cand.experience_years) : (cand.companies && cand.companies.length > 0) ? "Has Experience" : "No experience record"}
                 </div>
                 <small style={{ color: "#6B7280" }}>Similarity Score: {cand.similarity_score}%</small>
               </td>

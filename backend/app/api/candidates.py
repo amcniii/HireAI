@@ -12,20 +12,8 @@ from app.models.candidate_skill import CandidateSkill
 from app.schemas.candidate import CandidateStatusUpdate, CandidateCompareRequest
 
 from app.services.pdf_parser import extract_text_from_pdf
-from app.services.resume_analyzer import (
-    extract_email,
-    extract_phone,
-    extract_name,
-    extract_skills,
-    calculate_skill_score,
-    extract_education,
-    extract_companies,
-    generate_ai_summary
-)
-from app.services.experience import (
-    extract_experience_years,
-    calculate_experience_score
-)
+from app.services.resume_analyzer import calculate_skill_score
+from app.services.experience import calculate_experience_score
 from app.services.similarity import calculate_similarity_score
 
 
@@ -57,17 +45,38 @@ def upload_resume(
 
     resume_text = extract_text_from_pdf(file_path)
 
-    name = extract_name(resume_text)
-    email = extract_email(resume_text)
-    phone = extract_phone(resume_text)
-    found_skills = extract_skills(resume_text)
+    from app.services.gemini_service import analyze_resume_with_gemini
+    from app.services.hf_service import analyze_resume_with_hf
+
+    parsed_data = analyze_resume_with_gemini(resume_text, job.description)
+    provider_name = "Gemini"
+
+    if not parsed_data:
+        print("[BACKEND] Gemini failed or key missing. Attempting Hugging Face fallback...")
+        parsed_data = analyze_resume_with_hf(resume_text, job.description)
+        provider_name = "Hugging Face"
+
+    if not parsed_data:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to parse resume using both Gemini and Hugging Face. Please ensure a valid GEMINI_API_KEY or HF_TOKEN is configured in your .env file."
+        )
+
+    name = parsed_data.get("name") or "Unknown"
+    email = parsed_data.get("email") or "Not found"
+    phone = parsed_data.get("phone") or "Not found"
+    found_skills = parsed_data.get("skills") or []
+    education = parsed_data.get("education") or []
+    companies = parsed_data.get("companies") or []
+    experience_years = parsed_data.get("experience_years")
+    if experience_years is None:
+        experience_years = 0.0
+    ai_summary = parsed_data.get("ai_summary") or f"Resume successfully analyzed by {provider_name}."
 
     skill_score, matched_skills = calculate_skill_score(
         found_skills,
         job.required_skills
     )
-
-    experience_years = extract_experience_years(resume_text)
 
     experience_score = calculate_experience_score(
         experience_years,
@@ -85,10 +94,6 @@ def upload_resume(
         (experience_score * 0.25),
         2
     )
-
-    education = extract_education(resume_text)
-    companies = extract_companies(resume_text)
-    ai_summary = generate_ai_summary(name, found_skills, experience_years, overall_score)
 
     candidate = Candidate(
         job_id=job_id,
@@ -214,40 +219,49 @@ def get_candidates_by_job(job_id: UUID, db: Session = Depends(get_db)):
 def ensure_candidate_details(candidate, skills, db):
     updated = False
 
-    if candidate.experience_years == 0.0:
-        exp_years = extract_experience_years(candidate.resume_text)
-        if exp_years > 0.0:
-            candidate.experience_years = exp_years
-            job = db.query(Job).filter(Job.id == candidate.job_id).first()
-            if job:
-                exp_score = calculate_experience_score(exp_years, job.minimum_experience)
-                candidate.experience_score = exp_score
-                candidate.overall_score = round(
-                    (candidate.skill_score * 0.40) +
-                    (candidate.similarity_score * 0.35) +
-                    (exp_score * 0.25),
-                    2
-                )
-            candidate.ai_summary = None  # Force regenerate summary with updated experience
+    # If any crucial details are missing or are placeholder values, we run LLM once to populate everything
+    is_placeholder_summary = (
+        not candidate.ai_summary or 
+        candidate.ai_summary == "Resume successfully analyzed by Gemini." or 
+        candidate.ai_summary == "Resume successfully analyzed by Hugging Face."
+    )
+    if is_placeholder_summary or not candidate.education or not candidate.companies:
+        from app.services.gemini_service import analyze_resume_with_gemini
+        from app.services.hf_service import analyze_resume_with_hf
+        job = db.query(Job).filter(Job.id == candidate.job_id).first()
+        job_desc = job.description if job else ""
+        
+        parsed_data = analyze_resume_with_gemini(candidate.resume_text, job_desc)
+        if not parsed_data:
+            print("[BACKEND] Gemini failed or key missing in ensure_candidate_details. Attempting Hugging Face fallback...")
+            parsed_data = analyze_resume_with_hf(candidate.resume_text, job_desc)
+
+        if parsed_data:
+            if not candidate.name:
+                candidate.name = parsed_data.get("name")
+            if not candidate.email:
+                candidate.email = parsed_data.get("email")
+            if not candidate.phone:
+                candidate.phone = parsed_data.get("phone")
+            if not candidate.education or candidate.education == []:
+                candidate.education = parsed_data.get("education") or []
+            if not candidate.companies or candidate.companies == []:
+                candidate.companies = parsed_data.get("companies") or []
+            if candidate.experience_years == 0.0:
+                exp_years = parsed_data.get("experience_years") or 0.0
+                candidate.experience_years = exp_years
+                if job:
+                    exp_score = calculate_experience_score(exp_years, job.minimum_experience)
+                    candidate.experience_score = exp_score
+                    candidate.overall_score = round(
+                        (candidate.skill_score * 0.40) +
+                        (candidate.similarity_score * 0.35) +
+                        (exp_score * 0.25),
+                        2
+                    )
+            if not candidate.ai_summary:
+                candidate.ai_summary = parsed_data.get("ai_summary")
             updated = True
-
-    if not candidate.education or candidate.education == []:
-        candidate.education = extract_education(candidate.resume_text)
-        updated = True
-
-    if not candidate.companies or candidate.companies == []:
-        candidate.companies = extract_companies(candidate.resume_text)
-        updated = True
-
-    if not candidate.ai_summary:
-        skill_list = [s.skill for s in skills]
-        candidate.ai_summary = generate_ai_summary(
-            candidate.name,
-            skill_list,
-            candidate.experience_years,
-            candidate.overall_score
-        )
-        updated = True
 
     if updated:
         db.commit()

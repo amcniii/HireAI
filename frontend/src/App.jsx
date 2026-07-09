@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import API from "./services/api";
 import "./styles/index.css";
+import { formatExperience } from "./utils/format";
 import Dashboard from "./pages/Dashboard";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import Candidates from "./pages/Candidates";
-
 import Compare from "./pages/Compare";
-import Analytics from "./pages/Analytics";
+// import Analytics from "./pages/Analytics";
+import CompareTable from "./components/CompareTable";
 
 function App() {
   const [activePage, setActivePage] = useState("Dashboard");
@@ -180,6 +181,7 @@ function App() {
         </svg>
       ),
     },
+    /*
     {
       id: "Analytics",
       label: "Analytics",
@@ -190,6 +192,7 @@ function App() {
         </svg>
       ),
     },
+    */
     {
       id: "Settings",
       label: "Settings",
@@ -390,7 +393,7 @@ function App() {
         {activePage === "Compare" && <Compare />}
 
 
-        {activePage === "Analytics" && <Analytics />}
+        {/* {activePage === "Analytics" && <Analytics />} */}
 
         {activePage === "Settings" && <Settings />}
 
@@ -876,93 +879,352 @@ function CandidatesPreview() {
 function UploadResumePreview() {
   const [jobs, setJobs] = useState([]);
   const [jobId, setJobId] = useState("");
-  const [file, setFile] = useState(null);
-  const [result, setResult] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
+  const [results, setResults] = useState([]);
+  const [comparisonData, setComparisonData] = useState([]);
+  const [dragActive, setDragActive] = useState(false);
+
+  useEffect(() => {
+    fetchJobs();
+  }, []);
 
   const fetchJobs = async () => {
     try {
       const response = await API.get("/jobs/");
       setJobs(response.data);
-      setMessage("✅ Jobs loaded. Select a job.");
     } catch (error) {
       console.error(error);
       setMessage("❌ Failed to load jobs.");
     }
   };
 
+  const processFiles = (filesList) => {
+    const files = Array.from(filesList);
+    const pdfFiles = files.filter(f => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"));
+    
+    if (pdfFiles.length !== files.length) {
+      alert("Only PDF files are allowed.");
+    }
+
+    if (pdfFiles.length === 0) return;
+
+    const newFiles = pdfFiles.map(file => ({
+      file,
+      id: Math.random().toString(36).substr(2, 9),
+      name: file.name,
+      size: (file.size / (1024 * 1024)).toFixed(2) + " MB",
+      status: "pending", // pending, uploading, analyzing, success, failed
+      error: "",
+      result: null
+    }));
+
+    setSelectedFiles(prev => {
+      const combined = [...prev, ...newFiles];
+      if (combined.length > 5) {
+        alert("Maximum 5 resumes allowed at once.");
+        return combined.slice(0, 5);
+      }
+      return combined;
+    });
+  };
+
+  const handleFileChange = (e) => {
+    if (e.target.files) {
+      processFiles(e.target.files);
+    }
+  };
+
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files) {
+      processFiles(e.dataTransfer.files);
+    }
+  };
+
+  const removeFile = (id) => {
+    if (uploading) return;
+    setSelectedFiles(prev => prev.filter(f => f.id !== id));
+  };
+
   const handleUpload = async () => {
-    if (!jobId || !file) {
-      setMessage("❌ Please select a job and choose a PDF file.");
+    if (!jobId) {
+      setMessage("❌ Please select a job role first.");
+      return;
+    }
+    if (selectedFiles.length === 0) {
+      setMessage("❌ Please select or drag 3 to 5 resumes to upload.");
       return;
     }
 
-    try {
-      setMessage("Uploading and analyzing resume...");
+    setUploading(true);
+    setMessage("Processing resumes...");
+    setResults([]);
+    setComparisonData([]);
+
+    const uploadedResults = [];
+
+    // Reset status of all files
+    setSelectedFiles(prev => prev.map(f => ({ ...f, status: "pending", error: "", result: null })));
+
+    for (let i = 0; i < selectedFiles.length; i++) {
+      const fileItem = selectedFiles[i];
+
+      // Set status to uploading
+      setSelectedFiles(prev => prev.map(f => f.id === fileItem.id ? { ...f, status: "uploading" } : f));
 
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", fileItem.file);
 
-      const response = await API.post(
-        `/candidates/jobs/${jobId}/upload-resume`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+      try {
+        // Set status to analyzing
+        setSelectedFiles(prev => prev.map(f => f.id === fileItem.id ? { ...f, status: "analyzing" } : f));
 
-      setResult(response.data);
-      setMessage("✅ Resume uploaded and analyzed successfully");
-    } catch (error) {
-      console.error(error);
-      setMessage("❌ Resume upload failed.");
+        const response = await API.post(
+          `/candidates/jobs/${jobId}/upload-resume`,
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+
+        // Success
+        setSelectedFiles(prev => prev.map(f => f.id === fileItem.id ? { ...f, status: "success", result: response.data } : f));
+        uploadedResults.push(response.data);
+      } catch (error) {
+        console.error(error);
+        const errMsg = error.response?.data?.detail || "Upload and analysis failed.";
+        setSelectedFiles(prev => prev.map(f => f.id === fileItem.id ? { ...f, status: "failed", error: errMsg } : f));
+      }
     }
+
+    setResults(uploadedResults);
+    setUploading(false);
+
+    const successCount = selectedFiles.filter(f => f.status === "success" || uploadedResults.some(r => r.file_name === f.name)).length;
+    if (successCount === selectedFiles.length) {
+      setMessage(`✅ All ${selectedFiles.length} resumes analyzed successfully!`);
+    } else {
+      setMessage(`⚠️ Finished with some errors. Analyzed: ${uploadedResults.length}/${selectedFiles.length}`);
+    }
+
+    const candidateIds = uploadedResults.map(r => r.candidate_id).filter(Boolean);
+    if (candidateIds.length > 0) {
+      try {
+        setMessage(prev => prev + " Fetching side-by-side comparison...");
+        const compareRes = await API.post("/candidates/compare", {
+          candidate_ids: candidateIds
+        });
+        setComparisonData(compareRes.data);
+        setMessage(prev => prev.replace(" Fetching side-by-side comparison...", "") + " Side-by-side comparison loaded below!");
+      } catch (err) {
+        console.error("Failed to fetch comparison data:", err);
+      }
+    }
+  };
+
+  const getScoreClass = (score) => {
+    if (score >= 80) return "score-high";
+    if (score >= 50) return "score-medium";
+    return "score-low";
   };
 
   return (
     <section className="placeholder-page">
       <div className="panel">
-        <h1>Upload Resume</h1>
-        <p>Select a job and upload a PDF resume for AI scoring.</p>
+        <h1>Upload Resumes</h1>
+        <p>Select a job role, select/drag 3 to 5 resumes, and run AI screening at once.</p>
 
-        <div className="mini-section">
-          <button className="primary-btn" onClick={fetchJobs}>
-            Load Jobs
-          </button>
-
-          <select value={jobId} onChange={(e) => setJobId(e.target.value)}>
-            <option value="">Select Job</option>
-            {jobs.map((job) => (
-              <option key={job.id} value={job.id}>
-                {job.title} - {job.minimum_experience} Years
-              </option>
-            ))}
-          </select>
-
-          <input
-            type="file"
-            accept="application/pdf"
-            onChange={(e) => setFile(e.target.files[0])}
-          />
-
-          <button className="primary-btn" onClick={handleUpload}>
-            Upload Resume
-          </button>
-
-          {message && <p className="form-message">{message}</p>}
-
-          {result && (
-            <div className="empty-state">
-              <h3>Analysis Result</h3>
-              <p><strong>Name:</strong> {result.name || "Unknown"}</p>
-              <p><strong>Email:</strong> {result.email || "Not found"}</p>
-              <p><strong>Skill Score:</strong> {result.skill_score}</p>
-              <p><strong>Similarity Score:</strong> {result.similarity_score}</p>
-              <p><strong>Experience Score:</strong> {result.experience_score}</p>
-              <p><strong>Overall Score:</strong> {result.overall_score}</p>
+        <div className="mini-section" style={{ background: "transparent", border: "none", boxShadow: "none", padding: 0 }}>
+          <div style={{ display: "flex", gap: "16px", marginBottom: "24px", alignItems: "flex-end" }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: "14px", fontWeight: "700", display: "block", marginBottom: "8px" }}>Target Job Role</label>
+              <select 
+                value={jobId} 
+                onChange={(e) => setJobId(e.target.value)}
+                disabled={uploading}
+                style={{ margin: 0, width: "100%" }}
+              >
+                <option value="">Select Job Role</option>
+                {jobs.map((job) => (
+                  <option key={job.id} value={job.id}>
+                    {job.title} - {job.minimum_experience} Years Required
+                  </option>
+                ))}
+              </select>
             </div>
+            
+            <button 
+              className="secondary-btn" 
+              onClick={fetchJobs}
+              disabled={uploading}
+              style={{ width: "46px", height: "46px", padding: 0, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+              title="Refresh Job Roles"
+            >
+              🔄
+            </button>
+          </div>
+
+          {/* Drag & Drop Zone */}
+          <div 
+            className={`dropzone-container ${dragActive ? "drag-active" : ""}`}
+            onDragEnter={handleDrag}
+            onDragLeave={handleDrag}
+            onDragOver={handleDrag}
+            onDrop={handleDrop}
+            onClick={() => document.getElementById("file-input").click()}
+            style={{ pointerEvents: uploading ? "none" : "auto", opacity: uploading ? 0.6 : 1 }}
+          >
+            <div className="dropzone-icon">📤</div>
+            <h3>Drag & drop resumes here, or click to browse</h3>
+            <p style={{ margin: 0, fontSize: "13px" }}>Supports PDF only. We recommend uploading 3 to 5 resumes at once (Max 5).</p>
+            <input 
+              id="file-input"
+              type="file"
+              multiple
+              accept="application/pdf"
+              onChange={handleFileChange}
+              style={{ display: "none" }}
+            />
+          </div>
+
+          {/* Selected Files List */}
+          {selectedFiles.length > 0 && (
+            <div className="file-list">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h4 style={{ fontWeight: 800 }}>Selected Resumes ({selectedFiles.length}/5)</h4>
+                {selectedFiles.length < 3 && (
+                  <span style={{ fontSize: "12px", color: "#f59e0b", fontWeight: 700 }}>⚠️ We recommend uploading 3-5 resumes</span>
+                )}
+              </div>
+              
+              {selectedFiles.map((fileObj) => (
+                <div key={fileObj.id} className="file-item">
+                  <div className="file-info">
+                    <span className="file-icon">📄</span>
+                    <div className="file-details">
+                      <span className="file-name" title={fileObj.name}>{fileObj.name}</span>
+                      <span className="file-size">{fileObj.size}</span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                    <span className={`file-status ${fileObj.status}`}>
+                      {fileObj.status === "pending" && "⏳ Pending"}
+                      {fileObj.status === "uploading" && "📤 Uploading..."}
+                      {fileObj.status === "analyzing" && "⚙️ Analyzing..."}
+                      {fileObj.status === "success" && "✅ Ready"}
+                      {fileObj.status === "failed" && `❌ Error: ${fileObj.error}`}
+                    </span>
+
+                    {!uploading && (
+                      <button 
+                        className="remove-file-btn" 
+                        onClick={(e) => { e.stopPropagation(); removeFile(fileObj.id); }}
+                        title="Remove file"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              <div style={{ display: "flex", gap: "16px", marginTop: "16px", justifyContent: "flex-end" }}>
+                {!uploading && (
+                  <button 
+                    className="secondary-btn" 
+                    onClick={() => setSelectedFiles([])}
+                  >
+                    Clear List
+                  </button>
+                )}
+                
+                <button 
+                  className="primary-btn" 
+                  onClick={handleUpload}
+                  disabled={uploading || selectedFiles.length === 0}
+                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                >
+                  {uploading ? "Analyzing..." : `Screen Resumes (${selectedFiles.length})`}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {message && <p className="form-message" style={{ textAlign: "center", margin: "20px 0" }}>{message}</p>}
+
+          {/* Side-by-side Candidate Comparison */}
+          {comparisonData.length > 0 ? (
+            <div className="results-table-container" style={{ marginTop: "40px" }}>
+              <h2 style={{ fontWeight: 900, marginBottom: "20px" }}>Screening & Comparison Results</h2>
+              <CompareTable comparisonData={comparisonData} />
+            </div>
+          ) : (
+            results.length > 0 && (
+              <div className="results-table-container">
+                <h2 style={{ fontWeight: 900, marginBottom: "16px" }}>Screening Results Summary</h2>
+                <div className="table-panel">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Candidate Name</th>
+                        <th>Email</th>
+                        <th>Skills Matched</th>
+                        <th>Experience</th>
+                        <th>Skill Match</th>
+                        <th>Similarity</th>
+                        <th>Overall Score</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {results.map((res, index) => (
+                        <tr key={res.candidate_id || index}>
+                          <td><strong>{res.name || "Unknown"}</strong></td>
+                          <td>{res.email || "Not found"}</td>
+                          <td>
+                            <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", maxWidth: "250px" }}>
+                              {res.matched_skills && res.matched_skills.length > 0 ? (
+                                res.matched_skills.map((skill, idx) => (
+                                  <span key={idx} style={{ background: "#ede9fe", color: "#7c3aed", fontSize: "11px", padding: "2px 6px", borderRadius: "4px", fontWeight: "700" }}>
+                                    {skill}
+                                  </span>
+                                ))
+                              ) : (
+                                <span style={{ color: "var(--muted)", fontSize: "12px" }}>None matched</span>
+                              )}
+                            </div>
+                          </td>
+                          <td>{res.experience_years ? formatExperience(res.experience_years) : "0 years"}</td>
+                          <td>{res.skill_score}%</td>
+                          <td>{res.similarity_score}%</td>
+                          <td>
+                            <span className={`score-badge-circle ${getScoreClass(res.overall_score)}`}>
+                              {Math.round(res.overall_score)}%
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )
           )}
         </div>
       </div>
