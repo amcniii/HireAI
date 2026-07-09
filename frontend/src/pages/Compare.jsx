@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import API from "../services/api";
 import CompareTable from "../components/CompareTable";
 
-export default function Compare() {
+export default function Compare({ searchQuery = "" }) {
   const [candidates, setCandidates] = useState([]);
   const [message, setMessage] = useState("");
   const [selectedIds, setSelectedIds] = useState([]);
@@ -166,9 +166,16 @@ export default function Compare() {
                     <th>Actions</th>
                   </tr>
                 </thead>
-
                 <tbody>
-                  {candidates.map((candidate, index) => (
+                  {candidates
+                    .filter((candidate) => {
+                      const query = searchQuery.toLowerCase();
+                      return (
+                        candidate.name?.toLowerCase().includes(query) ||
+                        candidate.email?.toLowerCase().includes(query)
+                      );
+                    })
+                    .map((candidate, index) => (
                     <tr key={candidate.id}>
                       <td style={{ textAlign: "center" }}>
                         <input

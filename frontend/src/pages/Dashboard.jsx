@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import "../styles/dashboard.css";
 import API from "../services/api";
 
-function Dashboard({ onNavigate }) {
+function Dashboard({ searchQuery = "", onNavigate }) {
   const [jobs, setJobs] = useState([]);
   const [candidates, setCandidates] = useState([]);
 
@@ -213,8 +213,14 @@ function Dashboard({ onNavigate }) {
                     </td>
                   </tr>
                 ) : (
-                  displayJobs.slice(0, 5).map((job) => (
-                    <tr key={job.id}>
+                  displayJobs
+                    .filter((job) => {
+                      const query = searchQuery.toLowerCase();
+                      return job.title?.toLowerCase().includes(query);
+                    })
+                    .slice(0, 5)
+                    .map((job) => (
+                      <tr key={job.id}>
                       <td className="job-title-cell">{job.title}</td>
                       <td>{job.minimum_experience}</td>
                       <td className="text-center">{job.applicants}</td>

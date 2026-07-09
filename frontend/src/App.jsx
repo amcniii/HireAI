@@ -16,6 +16,7 @@ function App() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
   const [notiOpen, setNotiOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const notiRef = useRef(null);
   const [notifications, setNotifications] = useState([
     {
@@ -278,13 +279,13 @@ function App() {
           </button>
 
           <div className="search">
-
             🔍
-
             <input
+              type="text"
               placeholder="Search jobs, candidates..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
-
           </div>
 
           <div className="admin-box">
@@ -377,17 +378,17 @@ function App() {
 
         </header>
 
-        {activePage === "Dashboard" && <Dashboard onNavigate={(page) => setActivePage(page)} />}
+        {activePage === "Dashboard" && <Dashboard searchQuery={searchQuery} onNavigate={(page) => setActivePage(page)} />}
        
-        {activePage === "Jobs" && <JobsPreview />}
+        {activePage === "Jobs" && <JobsPreview searchQuery={searchQuery} />}
 
         {activePage === "Create Job" && <CreateJobPreview />}
 
-        {activePage === "Candidates" && <Candidates />}
+        {activePage === "Candidates" && <Candidates searchQuery={searchQuery} />}
         {activePage === "Upload Resume" && <UploadResumePreview />}
 
 
-        {activePage === "Compare" && <Compare />}
+        {activePage === "Compare" && <Compare searchQuery={searchQuery} />}
 
 
         {activePage === "Analytics" && <Analytics />}
@@ -403,7 +404,7 @@ function App() {
 
 
 
-function JobsPreview() {
+function JobsPreview({ searchQuery }) {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -549,8 +550,17 @@ function JobsPreview() {
               </thead>
 
               <tbody>
-                {jobs.map((job) => (
-                  <tr key={job.id}>
+                {jobs
+                  .filter((job) => {
+                    const query = searchQuery.toLowerCase();
+                    return (
+                      job.title?.toLowerCase().includes(query) ||
+                      job.description?.toLowerCase().includes(query) ||
+                      job.required_skills?.some((s) => s.toLowerCase().includes(query))
+                    );
+                  })
+                  .map((job) => (
+                    <tr key={job.id}>
                     <td>
                       <strong>{job.title}</strong>
                     </td>
