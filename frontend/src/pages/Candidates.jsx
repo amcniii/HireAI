@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import API from "../services/api";
+import { formatExperience } from "../utils/format";
 
 export default function Candidates({ searchQuery = "" }) {
   const [candidates, setCandidates] = useState([]);
@@ -131,7 +132,7 @@ export default function Candidates({ searchQuery = "" }) {
 
                     <td>
                       {candidate.experience_years
-                        ? `${candidate.experience_years} years`
+                        ? formatExperience(candidate.experience_years)
                         : candidate.experience_score}
                     </td>
 

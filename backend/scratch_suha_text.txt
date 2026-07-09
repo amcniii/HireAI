@@ -1,0 +1,60 @@
+FATHIMA SUHA A S
++91-7907158013 | fathimasuha1612@gmail.com
+ï Suha | § Suhahhh |  Portfolio
+Trivandrum, Kerala - 695563, India
+PROFESSIONAL SUMMARY
+Aspiring Machine Learning and Data Science professional with a strong foundation in Python, data analysis, and
+machine learning techniques. Currently enhancing expertise in advanced machine learning and data science concepts
+while applying knowledge through academic and hands-on projects. Interested in developing data-driven solutions,
+predictive models, and intelligent systems to solve real-world problems.
+EDUCATION
+• B.Tech in Artificial Intelligence & Data Science
+September 2023 - May 2027
+Mentor Engineering College
+Ernakulam, India
+◦CGPA: 8.1/10.00
+EXPERIENCE
+• ThoughtMinds []
+01 July 2025 - 31 July 2025
+Software Development Intern (Java)
+Ernakulam, India
+◦Gained hands-on experience in backend development using Java and Spring Boot through project-based learning
+◦Worked with RESTful API design, layered architecture, and database integration using MySQL
+◦Practiced exception handling, validation techniques, and debugging to improve application reliability
+◦Collaborated in an agile team environment and performed API testing using Postman
+• Litmus7 []
+01 July 2024 - 31 July 2024
+Software Developer Intern (Python)
+Ernakulam, India
+◦Gained practical experience in Python backend development using Flask and relational databases
+◦Worked on CRUD-based web application development and database-driven functionality
+◦Applied testing and debugging techniques to ensure correct application behavior
+◦Learned best practices for backend logic implementation and data handling
+SKILLS
+• Programming Languages: Python, Java, R, SQL
+• Web Technologies: HTML, CSS, Flask
+• Database Systems: MySQL, MongoDB
+• Data Science & Machine Learning: NumPy, Pandas, Matplotlib, Scikit-learn, Supervised Learning, Unsupervised
+learning, Dimensionality Reduction, Big Data Analysis
+• Specialized Area: Artificial Intelligence, Data Science, Machine Learning
+• Mathematics & Statistics: Statistics, Probability, Linear Algebra
+• Other Tools & Technologies: Jupyter Notebook, VS Code
+PROJECTS
+• Employee Management System
+July 2025
+Tools: Java, Spring Boot, Spring Data JPA, MySQL, REST APIs, Postman
+◦Developed a RESTful Employee Management application supporting full CRUD operations on employee data
+◦Implemented layered architecture using Controller, Service, and Repository with Spring Data JPA
+◦Added centralized exception handling and validation to ensure reliable API behavior and data integrity
+◦Tested REST APIs using Postman to verify request handling, responses, and error scenarios
+• Student Management System
+July 2024
+Tools: Python, Flask, MySQL, HTML, CSS, SQL
+◦Developed a web-based Student Management System to manage student records using full CRUD operations
+◦Implemented Flask-based backend routes and MySQL database integration to process and store student data
+efficiently
+◦Created structured database tables and SQL queries to support reliable data retrieval and updates
+◦Developed modular backend components for easy integration with web interfaces and future system enhancements
+ADDITIONAL INFORMATION
+Languages: Malayalam, English, Hindi
+Interests: Artificial Intelligence, Data Science, Machine Learning, Problem Analysis, Data Analysis, Problem Solving
