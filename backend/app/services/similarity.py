@@ -15,6 +15,12 @@ def calculate_similarity_score(job_description: str, resume_text: str):
         [embeddings[1]]
     )[0][0]
 
-    score = round(float(similarity) * 100, 2)
+    raw_sim = float(similarity)
+    # Scale raw cosine similarity [0.15, 0.60] onto standard HR scale [40, 100]
+    if raw_sim <= 0.15:
+        score = round(max(raw_sim, 0.0) * 100, 2)
+    else:
+        scaled = 40.0 + ((raw_sim - 0.15) / (0.6 - 0.15)) * 60.0
+        score = round(min(scaled, 100.0), 2)
 
     return score

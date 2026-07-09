@@ -9,7 +9,7 @@ from app.database.database import get_db
 from app.models.job import Job
 from app.models.candidate import Candidate
 from app.models.candidate_skill import CandidateSkill
-from app.schemas.candidate import CandidateStatusUpdate
+from app.schemas.candidate import CandidateStatusUpdate, CandidateCompareRequest
 
 from app.services.pdf_parser import extract_text_from_pdf
 from app.services.resume_analyzer import (
@@ -17,7 +17,11 @@ from app.services.resume_analyzer import (
     extract_phone,
     extract_name,
     extract_skills,
-    calculate_skill_score
+    calculate_skill_score,
+    extract_education,
+    extract_companies,
+    generate_ai_summary,
+    extract_candidate_info_via_gemini
 )
 from app.services.experience import (
     extract_experience_years,
@@ -54,17 +58,37 @@ def upload_resume(
 
     resume_text = extract_text_from_pdf(file_path)
 
-    name = extract_name(resume_text)
-    email = extract_email(resume_text)
-    phone = extract_phone(resume_text)
-    found_skills = extract_skills(resume_text)
+    # Query Gemini AI parser first
+    gemini_data = extract_candidate_info_via_gemini(resume_text)
+    if gemini_data:
+        name = gemini_data.get("name") or extract_name(resume_text)
+        email = gemini_data.get("email") or extract_email(resume_text)
+        phone = gemini_data.get("phone") or extract_phone(resume_text)
+        found_skills = gemini_data.get("skills", [])
+        if not found_skills:
+            found_skills = extract_skills(resume_text)
+        education = gemini_data.get("education", [])
+        companies = gemini_data.get("companies", [])
+        ai_summary = gemini_data.get("ai_summary", "")
+        try:
+            experience_years = float(gemini_data.get("experience_years", 0.0))
+        except (ValueError, TypeError):
+            experience_years = 0.0
+    else:
+        name = extract_name(resume_text)
+        email = extract_email(resume_text)
+        phone = extract_phone(resume_text)
+        found_skills = extract_skills(resume_text)
+        education = extract_education(resume_text)
+        companies = extract_companies(resume_text)
+        experience_years = extract_experience_years(resume_text)
+        ai_summary = None
 
+    # Calculate scoring metrics
     skill_score, matched_skills = calculate_skill_score(
         found_skills,
         job.required_skills
     )
-
-    experience_years = extract_experience_years(resume_text)
 
     experience_score = calculate_experience_score(
         experience_years,
@@ -83,11 +107,17 @@ def upload_resume(
         2
     )
 
+    # Fallback summary if Gemini was not available
+    if not ai_summary:
+        ai_summary = generate_ai_summary(name, found_skills, experience_years, overall_score)
+
     candidate = Candidate(
         job_id=job_id,
         name=name,
         email=email,
         phone=phone,
+        education=education,
+        companies=companies,
         experience_years=experience_years,
         resume_text=resume_text,
         resume_file_url=file_path,
@@ -95,6 +125,7 @@ def upload_resume(
         similarity_score=similarity_score,
         experience_score=experience_score,
         overall_score=overall_score,
+        ai_summary=ai_summary,
         status="Processed"
     )
 
@@ -201,6 +232,130 @@ def get_candidates_by_job(job_id: UUID, db: Session = Depends(get_db)):
     }
 
 
+def ensure_candidate_details(candidate, skills, db):
+    updated = False
+
+    # Check if candidate has missing details or experience years is 0.0 (needs AI correction)
+    needs_data = (
+        not candidate.education or candidate.education == [] or
+        not candidate.companies or candidate.companies == [] or
+        not candidate.ai_summary or
+        candidate.experience_years == 0.0
+    )
+
+    gemini_data = None
+    if needs_data:
+        gemini_data = extract_candidate_info_via_gemini(candidate.resume_text)
+
+    if gemini_data:
+        # Correct experience years if Gemini parsed it
+        try:
+            ai_exp = float(gemini_data.get("experience_years", 0.0))
+        except (ValueError, TypeError):
+            ai_exp = 0.0
+
+        if not candidate.name or candidate.name == "Unknown":
+            candidate.name = gemini_data.get("name") or candidate.name
+            updated = True
+        if not candidate.email:
+            candidate.email = gemini_data.get("email") or candidate.email
+            updated = True
+        if not candidate.phone:
+            candidate.phone = gemini_data.get("phone") or candidate.phone
+            updated = True
+
+        if candidate.experience_years != ai_exp:
+            candidate.experience_years = ai_exp
+            updated = True
+
+        if not candidate.education or candidate.education == []:
+            candidate.education = gemini_data.get("education", [])
+            updated = True
+        if not candidate.companies or candidate.companies == []:
+            candidate.companies = gemini_data.get("companies", [])
+            updated = True
+        if not candidate.ai_summary:
+            candidate.ai_summary = gemini_data.get("ai_summary", "")
+            updated = True
+    else:
+        exp_years = candidate.experience_years
+        if exp_years == 0.0:
+            parsed_years = extract_experience_years(candidate.resume_text)
+            if parsed_years > 0.0:
+                exp_years = parsed_years
+
+        if exp_years != candidate.experience_years:
+            candidate.experience_years = exp_years
+            updated = True
+
+        if not candidate.education or candidate.education == []:
+            candidate.education = extract_education(candidate.resume_text)
+            updated = True
+
+        if not candidate.companies or candidate.companies == []:
+            candidate.companies = extract_companies(candidate.resume_text)
+            updated = True
+
+        if not candidate.ai_summary:
+            skill_list = [s.skill for s in skills]
+            candidate.ai_summary = generate_ai_summary(
+                candidate.name,
+                skill_list,
+                candidate.experience_years,
+                candidate.overall_score
+            )
+            updated = True
+
+    # Recalculate scores if context is found
+    job = db.query(Job).filter(Job.id == candidate.job_id).first()
+    if job:
+        candidate_skills = [s.skill for s in skills]
+        new_skill_score, matched_skills = calculate_skill_score(candidate_skills, job.required_skills)
+        if new_skill_score != candidate.skill_score:
+            candidate.skill_score = new_skill_score
+            updated = True
+
+        required_lowered = [req.lower().strip() for req in job.required_skills]
+        for s in skills:
+            skill_clean = s.skill.lower().strip()
+            is_matched = any(req == skill_clean or req in skill_clean or skill_clean in req for req in required_lowered)
+            if s.matched != is_matched:
+                s.matched = is_matched
+
+        new_similarity = calculate_similarity_score(job.description, candidate.resume_text)
+        if new_similarity != candidate.similarity_score:
+            candidate.similarity_score = new_similarity
+            updated = True
+
+        new_exp_score = calculate_experience_score(candidate.experience_years, job.minimum_experience)
+        if new_exp_score != candidate.experience_score:
+            candidate.experience_score = new_exp_score
+            updated = True
+
+        new_overall = round(
+            (candidate.skill_score * 0.40) +
+            (candidate.similarity_score * 0.35) +
+            (candidate.experience_score * 0.25),
+            2
+        )
+        if new_overall != candidate.overall_score:
+            candidate.overall_score = new_overall
+            # If scores updated, regenerate summary with correct scores
+            if not gemini_data or not gemini_data.get("ai_summary"):
+                skill_list = [s.skill for s in skills]
+                candidate.ai_summary = generate_ai_summary(
+                    candidate.name,
+                    skill_list,
+                    candidate.experience_years,
+                    candidate.overall_score
+                )
+            updated = True
+
+    if updated:
+        db.commit()
+        db.refresh(candidate)
+
+
 @router.get("/{candidate_id}")
 def get_candidate_details(candidate_id: UUID, db: Session = Depends(get_db)):
     candidate = db.query(Candidate).filter(Candidate.id == candidate_id).first()
@@ -213,6 +368,8 @@ def get_candidate_details(candidate_id: UUID, db: Session = Depends(get_db)):
         .filter(CandidateSkill.candidate_id == candidate_id)
         .all()
     )
+
+    ensure_candidate_details(candidate, skills, db)
 
     return {
         "id": str(candidate.id),
@@ -267,3 +424,74 @@ def update_candidate_status(
             "status": candidate.status
         }
     }
+
+@router.post("/compare")
+def compare_candidates(
+    request: CandidateCompareRequest,
+    db: Session = Depends(get_db)
+):
+    results = []
+    for candidate_id in request.candidate_ids:
+        candidate = db.query(Candidate).filter(Candidate.id == candidate_id).first()
+        if not candidate:
+            continue
+
+        skills = (
+            db.query(CandidateSkill)
+            .filter(CandidateSkill.candidate_id == candidate_id)
+            .all()
+        )
+
+        ensure_candidate_details(candidate, skills, db)
+
+        results.append({
+            "id": str(candidate.id),
+            "job_id": str(candidate.job_id),
+            "name": candidate.name,
+            "email": candidate.email,
+            "phone": candidate.phone,
+            "education": candidate.education,
+            "companies": candidate.companies,
+            "experience_years": candidate.experience_years,
+            "resume_file_url": candidate.resume_file_url,
+            "overall_score": candidate.overall_score,
+            "skill_score": candidate.skill_score,
+            "similarity_score": candidate.similarity_score,
+            "experience_score": candidate.experience_score,
+            "ai_summary": candidate.ai_summary,
+            "status": candidate.status,
+            "skills": [
+                {
+                    "skill": s.skill,
+                    "evidence": s.evidence,
+                    "matched": s.matched
+                }
+                for s in skills
+            ],
+            "created_at": candidate.created_at
+        })
+    return results
+
+@router.delete("/{candidate_id}")
+def delete_candidate(candidate_id: UUID, db: Session = Depends(get_db)):
+    candidate = db.query(Candidate).filter(
+        Candidate.id == candidate_id
+    ).first()
+
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+
+    # Delete all skills belonging to this candidate
+    db.query(CandidateSkill).filter(
+        CandidateSkill.candidate_id == candidate_id
+    ).delete(synchronize_session=False)
+
+    # Delete uploaded resume file
+    if candidate.resume_file_url and os.path.exists(candidate.resume_file_url):
+        os.remove(candidate.resume_file_url)
+
+    # Delete candidate
+    db.delete(candidate)
+    db.commit()
+
+    return {"message": "Candidate deleted successfully"}

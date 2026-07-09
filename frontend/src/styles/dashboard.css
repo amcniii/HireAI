@@ -1,0 +1,718 @@
+.dashboard-page {
+  flex: 1;
+  padding: 24px;
+  background: var(--bg);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ==========================================================================
+   1. HERO SECTION
+   ========================================================================== */
+.dashboard-page .hero {
+  display: grid;
+  grid-template-columns: 1.3fr 0.7fr;
+  align-items: center;
+  background: linear-gradient(135deg, rgba(237, 242, 255, 0.9), rgba(248, 239, 255, 0.9));
+  border-radius: 24px;
+  padding: 28px 36px;
+  min-height: 180px;
+  box-shadow: 0 10px 30px rgba(99, 102, 241, 0.05);
+  border: 1px solid rgba(229, 234, 243, 0.5);
+  position: relative;
+}
+
+body.dark .dashboard-page .hero {
+  background: linear-gradient(135deg, rgba(30, 27, 75, 0.4), rgba(58, 28, 96, 0.4));
+  border-color: rgba(30, 41, 59, 0.5);
+}
+
+.dashboard-page .hero-left {
+  max-width: 600px;
+}
+
+.dashboard-page .hero-tag {
+  display: inline-block;
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.dashboard-page .hero h1 {
+  font-size: 32px;
+  font-weight: 900;
+  line-height: 1.2;
+  margin: 0 0 10px;
+  color: var(--text-primary);
+}
+
+.dashboard-page .hero p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+
+.dashboard-page .hero-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.primary-btn {
+  background: linear-gradient(135deg, var(--blue), #9333ea);
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 15px rgba(124, 58, 237, 0.2);
+}
+
+.primary-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.3);
+}
+
+.secondary-btn {
+  background: var(--card-solid);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  box-shadow: var(--shadow);
+}
+
+.secondary-btn:hover {
+  transform: translateY(-2px);
+  background: var(--hover-bg);
+}
+
+.dashboard-page .hero-right {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.hero-widget-box {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+}
+
+body.dark .hero-widget-box {
+  background: rgba(15, 23, 42, 0.6);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+.dashboard-page .robot {
+  font-size: 50px;
+}
+
+.hero-chart-card {
+  width: 140px;
+  height: 70px;
+}
+
+/* ==========================================================================
+   2. STATS CARD GRID
+   ========================================================================== */
+.dashboard-page .stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.dashboard-page .stat-card {
+  background: var(--card-solid);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: var(--shadow);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dashboard-page .stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
+}
+
+.stat-icon-wrapper {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+}
+
+.stat-icon-wrapper.purple {
+  background: rgba(124, 58, 237, 0.1);
+  color: var(--primary);
+}
+
+.stat-icon-wrapper.blue {
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--blue);
+}
+
+.stat-icon-wrapper.green {
+  background: rgba(34, 197, 94, 0.1);
+  color: var(--green);
+}
+
+.stat-icon-wrapper.orange {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--orange);
+}
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-info h4 {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--muted);
+  margin: 0 0 4px;
+}
+
+.stat-info h2 {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0 0 4px;
+  line-height: 1.1;
+}
+
+.stat-info .trend-up {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--green);
+}
+
+.stat-info .top-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--orange);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   3. SHARED PANEL STYLING
+   ========================================================================== */
+.dashboard-page .panel {
+  background: var(--card-solid);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+}
+
+.panel h3 {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0 0 16px;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.panel-header h3 {
+  margin: 0;
+}
+
+.view-all-link {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.view-all-link:hover {
+  text-decoration: underline;
+}
+
+/* ==========================================================================
+   4. GRID ROW 3: RECENT JOBS | TOP CANDIDATE | CHART
+   ========================================================================== */
+.grid-row-3 {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1.4fr;
+  gap: 20px;
+}
+
+/* Recent Jobs Table */
+.recent-jobs-panel table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.recent-jobs-panel th {
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.recent-jobs-panel td {
+  padding: 12px 12px;
+  font-size: 13px;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border);
+}
+
+.job-title-cell {
+  font-weight: 600;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.badge.open {
+  background: rgba(34, 197, 94, 0.12);
+  color: #16a34a;
+}
+
+.panel-footer {
+  margin-top: auto;
+  padding-top: 14px;
+}
+
+.text-btn {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 12.5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.text-btn:hover {
+  gap: 4px;
+}
+
+/* Top Candidate Match Card */
+.top-candidate-panel {
+  align-items: center;
+}
+
+.top-candidate-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.progress-ring-box {
+  margin-bottom: 12px;
+}
+
+.top-cand-info {
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.top-cand-info h4 {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0 0 2px;
+}
+
+.top-cand-info .role {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary);
+  margin: 0 0 2px;
+}
+
+.top-cand-info .email {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.skills-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.skill-badge {
+  background: var(--hover-bg);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.profile-action-btn {
+  width: 100%;
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.15);
+}
+
+.profile-action-btn:hover {
+  opacity: 0.9;
+}
+
+/* Chart Selector styling */
+.chart-select {
+  border: 1px solid var(--border);
+  background: var(--card-solid);
+  color: var(--text-primary);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  outline: none;
+}
+
+.chart-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+}
+
+/* ==========================================================================
+   5. GRID ROW 4: QUICK ACTIONS | PROGRESS | INTERVIEWS | TIMELINE
+   ========================================================================== */
+.grid-row-4 {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 20px;
+}
+
+/* Quick Actions Card Box */
+.actions-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  height: 100%;
+}
+
+.action-card {
+  background: var(--hover-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.action-card:hover {
+  transform: translateY(-2px);
+  background: var(--card-solid);
+  border-color: var(--primary);
+  box-shadow: 0 6px 15px rgba(124, 58, 237, 0.05);
+}
+
+.action-circle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.action-circle.purple {
+  background: rgba(124, 58, 237, 0.1);
+  color: var(--primary);
+}
+
+.action-circle.blue {
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--blue);
+}
+
+.action-circle.green {
+  background: rgba(34, 197, 94, 0.1);
+  color: var(--green);
+}
+
+.action-circle.orange {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--orange);
+}
+
+.action-text h5 {
+  margin: 0 0 2px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.action-text p {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* Today's Progress */
+.progress-flex {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 100%;
+  justify-content: center;
+}
+
+.progress-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.progress-item {
+  display: flex;
+  align-items: center;
+  font-size: 11.5px;
+}
+
+.progress-item .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.dot-purple { background: var(--primary); }
+.dot-blue { background: var(--blue); }
+.dot-green { background: var(--green); }
+.dot-orange { background: var(--orange); }
+
+.progress-item .label {
+  color: var(--text-secondary);
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+.progress-item .val {
+  margin-left: auto;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* Upcoming Interviews list */
+.interviews-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.interview-slot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--hover-bg);
+  padding: 10px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+}
+
+.date-block {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(124, 58, 237, 0.1);
+  color: var(--primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.date-block .day {
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.date-block .month {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.interview-slot .details h5 {
+  margin: 0 0 2px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.interview-slot .details p {
+  margin: 0 0 2px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.interview-slot .details .link {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--blue);
+  cursor: pointer;
+}
+
+/* Recent Activity feed */
+.activity-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.feed-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.feed-item .icon-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.icon-badge.upload { background: rgba(37, 99, 235, 0.08); color: var(--blue); }
+.icon-badge.job { background: rgba(124, 58, 237, 0.08); color: var(--primary); }
+.icon-badge.analyze { background: rgba(34, 197, 94, 0.08); color: var(--green); }
+.icon-badge.compare { background: rgba(245, 158, 11, 0.08); color: var(--orange); }
+
+.feed-item .text-box p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.feed-item .text-box .time {
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+/* Empty texts */
+.empty-text {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+  margin: 20px 0;
+}
+
+/* ==========================================================================
+   6. RESPONSIVE MEDIA QUERIES
+   ========================================================================== */
+@media (max-width: 1400px) {
+  .grid-row-3 {
+    grid-template-columns: 1.2fr 1fr 1.2fr;
+  }
+  .grid-row-4 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 1100px) {
+  .dashboard-page .stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .grid-row-3 {
+    grid-template-columns: 1fr;
+  }
+  .grid-row-4 {
+    grid-template-columns: 1fr;
+  }
+  .dashboard-page .hero {
+    grid-template-columns: 1fr;
+    text-align: center;
+    gap: 20px;
+    padding: 24px;
+  }
+  .dashboard-page .hero-left {
+    margin: 0 auto;
+  }
+  .dashboard-page .hero-right {
+    justify-content: center;
+  }
+  .dashboard-page .hero-buttons {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 600px) {
+  .dashboard-page .stats {
+    grid-template-columns: 1fr;
+  }
+  .dashboard-page {
+    padding: 12px;
+  }
+}

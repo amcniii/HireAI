@@ -1,301 +1,1362 @@
-import { useState } from "react";
-import "./index.css";
+import { useState, useEffect, useRef } from "react";
+import API from "./services/api";
+import "./styles/index.css";
+import Dashboard from "./pages/Dashboard";
+import Settings from "./pages/Settings";
+import Login from "./pages/Login";
+import Candidates from "./pages/Candidates";
+
+// import Compare from "./pages/Compare";
+// import Analytics from "./pages/Analytics";
 
 function App() {
   const [activePage, setActivePage] = useState("Dashboard");
+  const [token, setToken] = useState(localStorage.getItem("token") || "");
+  const [user, setUser] = useState(JSON.parse(localStorage.getItem("user") || "null"));
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+  const [notiOpen, setNotiOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const notiRef = useRef(null);
+  const [notifications, setNotifications] = useState([
+    {
+      id: 1,
+      icon: "📄",
+      title: "Resume Analyzed",
+      description: "Vishnu Priya has been shortlisted with a 91% match score.",
+      time: "2 hrs ago",
+      read: false,
+      page: "Candidates"
+    },
+    {
+      id: 2,
+      icon: "💼",
+      title: "New Job Created",
+      description: "Backend Developer position is now open for applicants.",
+      time: "4 hrs ago",
+      read: false,
+      page: "Jobs"
+    },
+    {
+      id: 3,
+      icon: "👥",
+      title: "Candidate Application",
+      description: "Arjun Nair submitted a resume for Backend Developer.",
+      time: "1 day ago",
+      read: false,
+      page: "Candidates"
+    }
+  ]);
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  const handleMarkAllRead = () => {
+    setNotifications(notifications.map(n => ({ ...n, read: true })));
+  };
+
+  const handleNotificationClick = (noti) => {
+    setNotifications(notifications.map(n => n.id === noti.id ? { ...n, read: true } : n));
+    setActivePage(noti.page);
+    setNotiOpen(false);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+      if (notiRef.current && !notiRef.current.contains(event.target)) {
+        setNotiOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  useEffect(() => {
+    
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme === "Dark") {
+      document.body.classList.add("dark");
+    } else {
+      document.body.classList.remove("dark");
+    }
+
+    const handleUnauthorized = () => {
+      setToken("");
+      setUser(null);
+    };
+
+    window.addEventListener("unauthorized", handleUnauthorized);
+    return () => {
+      window.removeEventListener("unauthorized", handleUnauthorized);
+    };
+  }, []);
+
+  const handleLoginSuccess = (loggedInUser, userToken) => {
+    setToken(userToken);
+    setUser(loggedInUser);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setToken("");
+    setUser(null);
+  };
+
+  if (!token || !user) {
+    return <Login onLoginSuccess={handleLoginSuccess} />;
+  }
+
+  const initials = user.name
+    ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+    : "HR";
 
   const menuItems = [
-    "Dashboard",
-    "Jobs",
-    "Create Job",
-    "Candidates",
-    "Upload Resume",
-    "Compare Candidates",
-    "Analytics",
-    "Settings",
+    {
+      id: "Dashboard",
+      label: "Dashboard",
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+          <polyline points="9 22 9 12 15 12 15 22" />
+        </svg>
+      ),
+    },
+    {
+      id: "Jobs",
+      label: "Jobs",
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+          <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+        </svg>
+      ),
+    },
+    {
+      id: "Create Job",
+      label: "Create Job",
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+          <line x1="12" y1="8" x2="12" y2="16" />
+          <line x1="8" y1="12" x2="16" y2="12" />
+        </svg>
+      ),
+    },
+    {
+      id: "Candidates",
+      label: "Candidates",
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg>
+      ),
+    },
+    {
+      id: "Upload Resume",
+      label: "Upload Resume",
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="17 8 12 3 7 8" />
+          <line x1="12" y1="3" x2="12" y2="15" />
+        </svg>
+      ),
+    },
+    {
+      id: "Settings",
+      label: "Settings",
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        </svg>
+      ),
+    },
   ];
+
+  const toggleTheme = () => {
+    const isDark = document.body.classList.toggle("dark");
+    localStorage.setItem("theme", isDark ? "Dark" : "Light");
+  };
 
   return (
     <div className="dashboard">
+
+      {/* Sidebar */}
+
       <aside className="sidebar">
+
         <div className="brand">
-          <div className="brand-icon">✦</div>
+
+          <div className="brand-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </svg>
+          </div>
+
           <div>
             <h2>HireAI</h2>
-            <p>AI-Powered Hiring</p>
+            <p>AI Powered Hiring Platform</p>
           </div>
+
         </div>
 
         <nav className="menu">
+
           {menuItems.map((item) => (
+
             <a
-              key={item}
-              className={activePage === item ? "active" : ""}
-              onClick={() => setActivePage(item)}
+              key={item.id}
+              className={activePage === item.id ? "active" : ""}
+              onClick={() => setActivePage(item.id)}
             >
-              {item}
+              {item.icon}
+              <span>{item.label}</span>
             </a>
+
           ))}
+
         </nav>
 
-        <div className="upgrade-card">
-          <h3>Upgrade to Pro</h3>
-          <p>Unlock advanced analytics and AI insights.</p>
-          <button>🚀 Upgrade Now</button>
+        {/* Upgrade Box Removed */}
+
+        <div className="user-card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+
+          <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+            <div className="avatar">{initials}</div>
+
+            <div>
+              <h4 style={{ maxWidth: "120px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.name}</h4>
+              <p style={{ maxWidth: "120px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.email}</p>
+            </div>
+          </div>
+
+          <button onClick={handleLogout} style={{ background: "none", border: "none", fontSize: "18px", cursor: "pointer" }} title="Logout">
+            🚪
+          </button>
+
         </div>
 
-        <div className="user-card">
-          <div className="avatar">HR</div>
-          <div>
-            <h4>HR Admin</h4>
-            <p>hr@hireai.com</p>
-          </div>
-          <span>⋮</span>
-        </div>
       </aside>
 
+      {/* Main */}
+
       <main className="main">
+
         <header className="topbar">
-          <button className="menu-btn">☰</button>
+
+          <button className="menu-btn">
+            ☰
+          </button>
 
           <div className="search">
-            🔍 <input placeholder="Search anything..." />
-            <span>Ctrl K</span>
+            🔍
+            <input
+              type="text"
+              placeholder="Search jobs, candidates..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
 
           <div className="admin-box">
-            <div className="notification">
-              🔔<b>3</b>
+
+            <div className="notification-bell-container" ref={notiRef}>
+              <div className="notification-bell" onClick={() => setNotiOpen(!notiOpen)}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+                {unreadCount > 0 && <span className="bell-badge">{unreadCount}</span>}
+              </div>
+              {notiOpen && (
+                <div className="notifications-dropdown">
+                  <div className="notifications-header">
+                    <h4>Notifications</h4>
+                    {unreadCount > 0 && (
+                      <button className="mark-all-btn" onClick={handleMarkAllRead}>
+                        Mark all as read
+                      </button>
+                    )}
+                  </div>
+                  <div className="dropdown-divider" style={{ margin: "8px 0" }}></div>
+                  <div className="notification-list">
+                    {notifications.length === 0 ? (
+                      <div className="empty-notifications">
+                        <p>No notifications yet</p>
+                      </div>
+                    ) : (
+                      notifications.map((noti) => (
+                        <div
+                          key={noti.id}
+                          className={`notification-item-card ${noti.read ? "read" : "unread"}`}
+                          onClick={() => handleNotificationClick(noti)}
+                        >
+                          <div className="noti-icon-badge">{noti.icon}</div>
+                          <div className="noti-content">
+                            <h5>{noti.title}</h5>
+                            <p>{noti.description}</p>
+                            <span className="noti-time">{noti.time}</span>
+                          </div>
+                          {!noti.read && <span className="unread-pulse-dot"></span>}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="avatar">HR</div>
-            <div>
-              <h4>HR Admin</h4>
-              <p>Administrator</p>
+
+            <button className="theme-toggle-btn" onClick={toggleTheme} title="Toggle Theme">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="5" />
+                <line x1="12" y1="1" x2="12" y2="3" />
+                <line x1="12" y1="21" x2="12" y2="23" />
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                <line x1="1" y1="12" x2="3" y2="12" />
+                <line x1="21" y1="12" x2="23" y2="12" />
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+              </svg>
+            </button>
+
+            <div className="profile-dropdown-container" ref={dropdownRef}>
+              <div className="avatar-header" onClick={() => setDropdownOpen(!dropdownOpen)}>
+                {initials}
+              </div>
+              {dropdownOpen && (
+                <div className="profile-dropdown">
+                  <div className="dropdown-user-info">
+                    <div className="dropdown-avatar">{initials}</div>
+                    <div className="dropdown-user-details">
+                      <h4>{user.name}</h4>
+                      <p>{user.email}</p>
+                    </div>
+                  </div>
+                  <div className="dropdown-divider"></div>
+                  <button className="dropdown-item" onClick={() => { setActivePage("Settings"); setDropdownOpen(false); }}>
+                    ⚙️ Settings
+                  </button>
+                  <button className="dropdown-item logout" onClick={() => { handleLogout(); setDropdownOpen(false); }}>
+                    🚪 Log Out
+                  </button>
+                </div>
+              )}
             </div>
+
           </div>
+
         </header>
 
-        {activePage === "Dashboard" && <DashboardPage />}
+        {activePage === "Dashboard" && <Dashboard searchQuery={searchQuery} onNavigate={(page) => setActivePage(page)} />}
+       
+        {activePage === "Jobs" && <JobsPreview searchQuery={searchQuery} />}
 
-        {activePage !== "Dashboard" && (
-          <section className="placeholder-page">
-            <div className="panel">
-              <h1>{activePage}</h1>
-              <p>This page is ready to connect with your HireAI backend APIs.</p>
+        {activePage === "Create Job" && <CreateJobPreview />}
 
-              {activePage === "Jobs" && <JobsPreview />}
-              {activePage === "Create Job" && <CreateJobPreview />}
-              {activePage === "Candidates" && <CandidatesPreview />}
-              {activePage === "Upload Resume" && <UploadResumePreview />}
-            </div>
-          </section>
-        )}
+        {activePage === "Candidates" && <Candidates searchQuery={searchQuery} />}
+        {activePage === "Upload Resume" && <UploadResumePreview />}
+
+        {/* Commented out Compare and Analytics pages as requested */}
+        {/*
+        {activePage === "Compare" && <Compare searchQuery={searchQuery} />}
+        {activePage === "Analytics" && <Analytics />}
+        */}
+
+        {activePage === "Settings" && <Settings />}
+
       </main>
+
     </div>
   );
 }
 
-function DashboardPage() {
+
+
+
+function JobsPreview({ searchQuery }) {
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+  const [editingJob, setEditingJob] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    title: "",
+    description: "",
+    required_skills: "",
+    optional_skills: "",
+    minimum_experience: "",
+  });
+
+  const [uploadingJob, setUploadingJob] = useState(null);
+  const [uploadQueue, setUploadQueue] = useState([]);
+  const [uploadProgress, setUploadProgress] = useState({ processed: 0, total: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleUploadClick = (job) => {
+    setUploadingJob(job);
+    setUploadQueue([]);
+    setUploadProgress({ processed: 0, total: 0 });
+    setIsProcessing(false);
+  };
+
+  const handleFileDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (isProcessing) return;
+    const droppedFiles = Array.from(e.dataTransfer.files).filter(
+      (f) => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf")
+    );
+    addFilesToQueue(droppedFiles);
+  };
+
+  const handleBatchFileChange = (e) => {
+    const selectedFiles = Array.from(e.target.files);
+    addFilesToQueue(selectedFiles);
+  };
+
+  const addFilesToQueue = (newFiles) => {
+    const combinedCount = uploadQueue.length + newFiles.length;
+    let filesToAdd = newFiles;
+    if (combinedCount > 50) {
+      setMessage("⚠️ Maximum limit is 50 resumes. Only the first 50 files will be queued.");
+      filesToAdd = newFiles.slice(0, 50 - uploadQueue.length);
+    }
+    const newItems = filesToAdd.map((file) => ({
+      file,
+      status: "queued",
+      score: null,
+    }));
+    setUploadQueue([...uploadQueue, ...newItems]);
+  };
+
+  const handleRemoveFromQueue = (index) => {
+    setUploadQueue(uploadQueue.filter((_, idx) => idx !== index));
+  };
+
+  const handleStartBatchProcessing = async () => {
+    if (uploadQueue.length === 0) return;
+    setIsProcessing(true);
+    setUploadProgress({ processed: 0, total: uploadQueue.length });
+
+    for (let i = 0; i < uploadQueue.length; i++) {
+      setUploadQueue((prev) =>
+        prev.map((item, idx) => (idx === i ? { ...item, status: "processing" } : item))
+      );
+
+      const item = uploadQueue[i];
+      const formData = new FormData();
+      formData.append("file", item.file);
+
+      let status = "done";
+      let score = 0;
+
+      try {
+        const response = await API.post(
+          `/candidates/jobs/${uploadingJob.id}/upload-resume`,
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+        score = response.data.overall_score || 0;
+      } catch (err) {
+        console.error(err);
+        status = "error";
+      }
+
+      setUploadQueue((prev) =>
+        prev.map((item, idx) => (idx === i ? { ...item, status, score } : item))
+      );
+      setUploadProgress((prev) => ({ ...prev, processed: i + 1 }));
+
+      if (i < uploadQueue.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    }
+    setIsProcessing(false);
+  };
+
+  const handleEditClick = (job) => {
+    setEditingJob(job);
+    setEditFormData({
+      title: job.title || "",
+      description: job.description || "",
+      required_skills: job.required_skills ? job.required_skills.join(", ") : "",
+      optional_skills: job.optional_skills ? job.optional_skills.join(", ") : "",
+      minimum_experience: job.minimum_experience || 0,
+    });
+  };
+
+  const handleEditChange = (e) => {
+    setEditFormData({
+      ...editFormData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleUpdateJob = async () => {
+    try {
+      setMessage("");
+      const payload = {
+        title: editFormData.title,
+        description: editFormData.description,
+        required_skills: editFormData.required_skills
+          .split(",")
+          .map((skill) => skill.trim())
+          .filter(Boolean),
+        optional_skills: editFormData.optional_skills
+          .split(",")
+          .map((skill) => skill.trim())
+          .filter(Boolean),
+        minimum_experience: Number(editFormData.minimum_experience),
+      };
+
+      await API.put(`/jobs/${editingJob.id}`, payload);
+      setMessage("✅ Job updated successfully!");
+      setEditingJob(null);
+      fetchJobs();
+    } catch (error) {
+      console.error(error);
+      setMessage("❌ Failed to update job.");
+    }
+  };
+
+  const fetchJobs = async () => {
+    try {
+      setLoading(true);
+      setMessage("");
+
+      const response = await API.get("/jobs/");
+      setJobs(response.data);
+
+      setMessage("✅ Jobs loaded successfully");
+    } catch (error) {
+      console.error(error);
+      setMessage("❌ Failed to load jobs. Make sure backend is running.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteJob = async (jobId) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this job?"
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      await API.delete(`/jobs/${jobId}`);
+
+      setJobs(jobs.filter((job) => job.id !== jobId));
+
+      setMessage("✅ Job deleted successfully");
+    } catch (error) {
+      console.error(error);
+      setMessage("❌ Failed to delete job.");
+    }
+  };
+
   return (
-    <>
-      <section className="hero">
-        <div>
-          <h1>Dashboard 👋</h1>
-          <p>
-            
+    <section className="placeholder-page">
+      <div className="panel">
+
+        <div className="panel-head">
+          <div>
+            <h1>Job Management</h1>
+            <p>
+              Manage job postings stored in PostgreSQL.
+            </p>
+          </div>
+
+          <button className="primary-btn" onClick={fetchJobs}>
+            Refresh Jobs
+          </button>
+        </div>
+
+        {message && (
+          <p className="form-message">
+            {message}
           </p>
-        </div>
-        <button className="date-btn">📅 Jul 1, 2026 - Jul 31, 2026</button>
-      </section>
+        )}
 
-      <section className="stats">
-        <Stat icon="💼" title="Total Jobs" value="12" note="↑ 2 from last month" color="purple" />
-        <Stat icon="👥" title="Total Candidates" value="148" note="↑ 18% from last month" color="blue" />
-        <Stat icon="📄" title="Resumes Uploaded" value="156" note="↑ 22% from last month" color="green" />
-        <Stat icon="📈" title="Average Match Score" value="84%" note="↑ 6% from last month" color="orange" />
-      </section>
+        {loading && (
+          <p className="loading-text">
+            Loading jobs...
+          </p>
+        )}
 
-      <section className="content-grid">
-        <div className="panel chart-panel">
-          <div className="panel-head">
-            <h2>Hiring Overview</h2>
-            <button>Last 30 days⌄</button>
+        {!loading && jobs.length === 0 && (
+          <div className="empty-state">
+            <h3>No jobs found</h3>
+            <p>
+              Click Refresh Jobs or create a new job first.
+            </p>
           </div>
+        )}
 
-          <div className="legend">
-            <span><b className="dot purple-dot"></b>Job Postings</span>
-            <span><b className="dot blue-dot"></b>Resumes</span>
-            <span><b className="dot green-dot"></b>Hired</span>
+        {!loading && jobs.length > 0 && (
+          <div className="table-panel">
+            <table>
+              <thead>
+                <tr>
+                  <th>Job Title</th>
+                  <th>Description</th>
+                  <th>Required Skills</th>
+                  <th>Experience</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {jobs
+                  .filter((job) => {
+                    const query = searchQuery.toLowerCase();
+                    return (
+                      job.title?.toLowerCase().includes(query) ||
+                      job.description?.toLowerCase().includes(query) ||
+                      job.required_skills?.some((s) => s.toLowerCase().includes(query))
+                    );
+                  })
+                  .map((job) => (
+                    <tr key={job.id}>
+                    <td>
+                      <strong>{job.title}</strong>
+                    </td>
+
+                    <td>
+                      {job.description?.slice(0, 80)}
+                      {job.description?.length > 80 ? "..." : ""}
+                    </td>
+
+                    <td>
+                      {job.required_skills?.join(", ")}
+                    </td>
+
+                    <td>
+                      {job.minimum_experience} Years
+                    </td>
+
+                    <td style={{ display: "flex", gap: "8px" }}>
+                      <button
+                        className="primary-btn"
+                        style={{ padding: "6px 12px", fontSize: "12px", background: "#2563EB", borderColor: "#2563EB" }}
+                        onClick={() => handleEditClick(job)}
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button
+                        className="delete-btn"
+                        onClick={() => deleteJob(job.id)}
+                      >
+                        🗑 Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
+        )}
 
-          <div className="line-chart">
-            <div className="grid-line"></div>
-            <div className="chart-line purple-line"></div>
-            <div className="chart-line blue-line"></div>
-            <div className="chart-line green-line"></div>
-            <div className="chart-labels">
-              <span>Jun 1</span>
-              <span>Jun 8</span>
-              <span>Jun 15</span>
-              <span>Jun 22</span>
-              <span>Jun 29</span>
-              <span>Jul 1</span>
-            </div>
-          </div>
-        </div>
+      </div>
 
-        <div className="panel activity-panel">
-          <div className="panel-head">
-            <h2>Recent Activity</h2>
-            <a>View All</a>
-          </div>
-
-          <Activity icon="📄" title="New resume uploaded" text="John Doe applied for Frontend Developer" time="10m ago" />
-          <Activity icon="👤" title="Candidate shortlisted" text="Sarah Smith matched 92% for AI Engineer" time="1h ago" />
-          <Activity icon="💼" title="New job posted" text="Backend Developer position created" time="2h ago" />
-          <Activity icon="✅" title="Candidate hired" text="Michael Brown hired for Data Scientist" time="5h ago" />
-        </div>
-      </section>
-
-      <section className="bottom-grid">
-        <div className="panel table-panel">
-          <div className="panel-head">
-            <h2>Recent Job Postings</h2>
-            <a>View All Jobs</a>
-          </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th>Job Title</th>
-                <th>Department</th>
-                <th>Candidates</th>
-                <th>Status</th>
-                <th>Posted On</th>
-              </tr>
-            </thead>
-            <tbody>
-              <JobRow icon="</>" title="Frontend Developer" dept="Engineering" candidates="24" status="Open" date="Jul 1, 2026" />
-              <JobRow icon="≡" title="Backend Developer" dept="Engineering" candidates="18" status="Open" date="Jun 30, 2026" />
-              <JobRow icon="AI" title="AI Engineer" dept="AI/ML" candidates="36" status="Closed" date="Jun 28, 2026" />
-              <JobRow icon="📈" title="Data Scientist" dept="Data Science" candidates="28" status="Open" date="Jun 27, 2026" />
-            </tbody>
-          </table>
-        </div>
-
-        <div className="panel skills-panel">
-          <div className="panel-head">
-            <h2>Top Skills Demand</h2>
-            <a>View All</a>
-          </div>
-
-          <div className="skills-box">
-            <div className="donut">
+      {editingJob && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(0,0,0,0.5)",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          zIndex: 1000
+        }}>
+          <div className="panel" style={{
+            width: "500px",
+            maxHeight: "90vh",
+            overflowY: "auto",
+            padding: "24px",
+            background: "var(--bg-panel)",
+            borderRadius: "12px",
+            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+          }}>
+            <h2>Edit Job</h2>
+            <div className="mini-section" style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "16px" }}>
               <div>
-                <h2>156</h2>
-                <p>Total Skills</p>
+                <label style={{ fontSize: "14px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Job Title</label>
+                <input
+                  name="title"
+                  placeholder="Job Title"
+                  value={editFormData.title}
+                  onChange={handleEditChange}
+                  style={{ width: "100%" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: "14px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Job Description</label>
+                <textarea
+                  name="description"
+                  placeholder="Job Description"
+                  value={editFormData.description}
+                  onChange={handleEditChange}
+                  style={{ width: "100%", height: "100px" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: "14px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Required Skills (comma separated)</label>
+                <input
+                  name="required_skills"
+                  placeholder="Required Skills: React, Python, FastAPI"
+                  value={editFormData.required_skills}
+                  onChange={handleEditChange}
+                  style={{ width: "100%" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: "14px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Optional Skills (comma separated)</label>
+                <input
+                  name="optional_skills"
+                  placeholder="Optional Skills: Docker, AWS"
+                  value={editFormData.optional_skills}
+                  onChange={handleEditChange}
+                  style={{ width: "100%" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: "14px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Minimum Experience (years)</label>
+                <input
+                  name="minimum_experience"
+                  type="number"
+                  placeholder="Minimum Experience"
+                  value={editFormData.minimum_experience}
+                  onChange={handleEditChange}
+                  style={{ width: "100%" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "12px" }}>
+                <button className="secondary-btn" onClick={() => setEditingJob(null)}>
+                  Cancel
+                </button>
+                <button className="primary-btn" onClick={handleUpdateJob}>
+                  Save Changes
+                </button>
               </div>
             </div>
-
-            <ul>
-              <li><span className="purple-dot"></span>Python <b>28%</b></li>
-              <li><span className="blue-dot"></span>React <b>24%</b></li>
-              <li><span className="green-dot"></span>AI/ML <b>18%</b></li>
-              <li><span className="orange-dot"></span>SQL <b>14%</b></li>
-              <li><span className="gray-dot"></span>Others <b>16%</b></li>
-            </ul>
           </div>
         </div>
-      </section>
-    </>
+      )}
+
+      {/* uploadingJob modal removed as upload resides fully in Upload Resume page */}
+    </section>
   );
 }
 
-function JobsPreview() {
-  return (
-    <div className="mini-section">
-      <h2>Job Management</h2>
-      <p>View, update, and delete job postings from the backend.</p>
-      <button className="primary-btn">Fetch Jobs</button>
-    </div>
-  );
-}
 
 function CreateJobPreview() {
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    required_skills: "",
+    optional_skills: "",
+    minimum_experience: "",
+  });
+
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleCreateJob = async () => {
+    try {
+      setLoading(true);
+      setMessage("");
+
+      const payload = {
+        title: formData.title,
+        description: formData.description,
+        required_skills: formData.required_skills
+          .split(",")
+          .map((skill) => skill.trim())
+          .filter(Boolean),
+        optional_skills: formData.optional_skills
+          .split(",")
+          .map((skill) => skill.trim())
+          .filter(Boolean),
+        minimum_experience: Number(formData.minimum_experience),
+      };
+
+      await API.post("/jobs/", payload);
+
+      setMessage("✅ Job created successfully!");
+
+      setFormData({
+        title: "",
+        description: "",
+        required_skills: "",
+        optional_skills: "",
+        minimum_experience: "",
+      });
+    } catch (error) {
+      console.error(error);
+      setMessage("❌ Failed to create job. Check backend.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="mini-section">
-      <h2>Create New Job</h2>
-      <input placeholder="Job Title" />
-      <textarea placeholder="Job Description"></textarea>
-      <button className="primary-btn">Create Job</button>
-    </div>
+    <section className="placeholder-page">
+      <div className="panel">
+        <h1>Create Job</h1>
+        <p>Create a new job role for AI-powered resume matching.</p>
+
+        <div className="mini-section">
+          <input
+            name="title"
+            placeholder="Job Title"
+            value={formData.title}
+            onChange={handleChange}
+          />
+
+          <textarea
+            name="description"
+            placeholder="Job Description"
+            value={formData.description}
+            onChange={handleChange}
+          />
+
+          <input
+            name="required_skills"
+            placeholder="Required Skills: React, Python, FastAPI"
+            value={formData.required_skills}
+            onChange={handleChange}
+          />
+
+          <input
+            name="optional_skills"
+            placeholder="Optional Skills: Docker, AWS"
+            value={formData.optional_skills}
+            onChange={handleChange}
+          />
+
+          <input
+            name="minimum_experience"
+            type="number"
+            placeholder="Minimum Experience"
+            value={formData.minimum_experience}
+            onChange={handleChange}
+          />
+
+          <button className="primary-btn" onClick={handleCreateJob}>
+            {loading ? "Creating..." : "Create Job"}
+          </button>
+
+          {message && <p className="form-message">{message}</p>}
+        </div>
+      </div>
+    </section>
   );
 }
+
 
 function CandidatesPreview() {
+  const [candidates, setCandidates] = useState([]);
+  const [message, setMessage] = useState("");
+
+  const fetchCandidates = async () => {
+    try {
+      const response = await API.get("/candidates/");
+      setCandidates(response.data);
+      setMessage("✅ Candidates loaded successfully");
+    } catch (error) {
+      console.error(error);
+      setMessage("❌ Failed to load candidates");
+    }
+  };
+
   return (
-    <div className="mini-section">
-      <h2>Candidate Ranking</h2>
-      <p>Show candidates sorted by AI overall score.</p>
-      <button className="primary-btn">Load Candidates</button>
-    </div>
+    <section className="placeholder-page">
+      <div className="panel">
+        <div className="panel-head">
+          <div>
+            <h1>Candidates</h1>
+            <p>View AI-ranked candidates from your backend.</p>
+          </div>
+
+          <button className="primary-btn" onClick={fetchCandidates}>
+            Load Candidates
+          </button>
+        </div>
+
+        {message && <p className="form-message">{message}</p>}
+
+        {candidates.length > 0 && (
+          <div className="table-panel">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Skill Score</th>
+                  <th>Similarity</th>
+                  <th>Overall</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {candidates.map((candidate) => (
+                  <tr key={candidate.id}>
+                    <td>{candidate.name || "Unknown"}</td>
+                    <td>{candidate.email || "Not found"}</td>
+                    <td>{candidate.skill_score}</td>
+                    <td>{candidate.similarity_score}</td>
+                    <td>
+                      <strong>{candidate.overall_score}</strong>
+                    </td>
+                    <td>
+                      <span className="status open">
+                        {candidate.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
+
 
 function UploadResumePreview() {
-  return (
-    <div className="mini-section">
-      <h2>Upload Resume</h2>
-      <p>Upload PDF resumes and analyze them using AI scoring.</p>
-      <input type="file" />
-      <button className="primary-btn">Upload Resume</button>
-    </div>
-  );
-}
+  const [jobs, setJobs] = useState([]);
+  const [jobId, setJobId] = useState("");
+  const [uploadQueue, setUploadQueue] = useState([]);
+  const [uploadProgress, setUploadProgress] = useState({ processed: 0, total: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [message, setMessage] = useState("");
+  const [results, setResults] = useState([]);
 
-function Stat({ icon, title, value, note, color }) {
+  useEffect(() => {
+    fetchJobs();
+  }, []);
+
+  const fetchJobs = async () => {
+    try {
+      const response = await API.get("/jobs/");
+      setJobs(response.data);
+      setMessage("✅ Jobs loaded. Select a job.");
+    } catch (error) {
+      console.error(error);
+      setMessage("❌ Failed to load jobs.");
+    }
+  };
+
+  const handleFileDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (isProcessing) return;
+    const droppedFiles = Array.from(e.dataTransfer.files).filter(
+      (f) => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf")
+    );
+    addFilesToQueue(droppedFiles);
+  };
+
+  const handleBatchFileChange = (e) => {
+    const selectedFiles = Array.from(e.target.files);
+    addFilesToQueue(selectedFiles);
+  };
+
+  const addFilesToQueue = (newFiles) => {
+    const combinedCount = uploadQueue.length + newFiles.length;
+    let filesToAdd = newFiles;
+    if (combinedCount > 10) {
+      setMessage("⚠️ You can upload a maximum of 10 resumes at a time.");
+      filesToAdd = newFiles.slice(0, 10 - uploadQueue.length);
+    } else {
+      setMessage("");
+    }
+    const newItems = filesToAdd.map((file) => ({
+      file,
+      status: "queued",
+      score: null,
+      details: null
+    }));
+    setUploadQueue([...uploadQueue, ...newItems]);
+    setResults([]);
+  };
+
+  const handleRemoveFromQueue = (index) => {
+    setUploadQueue(uploadQueue.filter((_, idx) => idx !== index));
+  };
+
+  const handleStartBatchProcessing = async () => {
+    if (!jobId) {
+      setMessage("❌ Please select a job role first.");
+      return;
+    }
+    if (uploadQueue.length === 0) return;
+
+    setIsProcessing(true);
+    setResults([]);
+    setUploadProgress({ processed: 0, total: uploadQueue.length });
+
+    const screenResults = [];
+
+    for (let i = 0; i < uploadQueue.length; i++) {
+      setUploadQueue((prev) =>
+        prev.map((item, idx) => (idx === i ? { ...item, status: "processing" } : item))
+      );
+
+      const item = uploadQueue[i];
+      const formData = new FormData();
+      formData.append("file", item.file);
+
+      let status = "done";
+      let score = 0;
+      let data = null;
+
+      try {
+        const response = await API.post(
+          `/candidates/jobs/${jobId}/upload-resume`,
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+        data = response.data;
+        score = response.data.overall_score || 0;
+        screenResults.push(data);
+      } catch (err) {
+        console.error(err);
+        status = "error";
+      }
+
+      setUploadQueue((prev) =>
+        prev.map((item, idx) => (idx === i ? { ...item, status, score, details: data } : item))
+      );
+      setUploadProgress((prev) => ({ ...prev, processed: i + 1 }));
+
+      if (i < uploadQueue.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    }
+
+    setResults(screenResults);
+    setIsProcessing(false);
+    setMessage(`✅ Successfully screened ${screenResults.length} resumes!`);
+  };
+
   return (
-    <div className="stat-card">
-      <div className={`stat-icon ${color}`}>{icon}</div>
-      <div>
-        <p>{title}</p>
-        <h2>{value}</h2>
-        <small>{note}</small>
+    <section className="placeholder-page">
+      <div className="panel">
+        <h1>Upload Resumes</h1>
+        <p>Select a job role and drag-and-drop up to 10 resumes for real-time AI screening.</p>
+
+        <div className="mini-section">
+          <button className="primary-btn" onClick={fetchJobs}>
+            Load Jobs
+          </button>
+
+          <select value={jobId} onChange={(e) => setJobId(e.target.value)} disabled={isProcessing}>
+            <option value="">Select Job</option>
+            {jobs.map((job) => (
+              <option key={job.id} value={job.id}>
+                {job.title} - {job.minimum_experience} Years
+              </option>
+            ))}
+          </select>
+
+          {/* Drag & Drop Zone */}
+          {!isProcessing && (
+            <div
+              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handleFileDrop}
+              style={{
+                border: isDragging ? "2px dashed #7C3AED" : "2px dashed var(--border)",
+                backgroundColor: isDragging ? "rgba(124, 58, 237, 0.05)" : "var(--bg)",
+                borderRadius: "8px",
+                padding: "30px 20px",
+                textAlign: "center",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+                margin: "20px 0"
+              }}
+              onClick={() => document.getElementById("page-batch-file-input").click()}
+            >
+              <input
+                id="page-batch-file-input"
+                type="file"
+                multiple
+                accept="application/pdf"
+                onChange={handleBatchFileChange}
+                style={{ display: "none" }}
+              />
+              <span style={{ fontSize: "32px", display: "block", marginBottom: "8px" }}>📤</span>
+              <strong style={{ fontSize: "14px", display: "block", marginBottom: "4px" }}>
+                Drag & Drop resumes here or click to browse
+              </strong>
+              <small style={{ color: "var(--muted)", fontSize: "12px" }}>Supports up to 10 PDF resumes at a time</small>
+            </div>
+          )}
+
+          {/* Queue List / Progress Bar */}
+          {uploadQueue.length > 0 && (
+            <div style={{ marginTop: "16px", marginBottom: "20px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                <h4 style={{ margin: 0, fontWeight: "700", fontSize: "14px" }}>
+                  Resumes Queue ({uploadQueue.length})
+                </h4>
+                {isProcessing && (
+                  <small style={{ fontWeight: "700", color: "#7C3AED" }}>
+                    Screening: {uploadProgress.processed} / {uploadProgress.total}
+                  </small>
+                )}
+              </div>
+
+              {isProcessing && (
+                <div style={{ width: "100%", height: "8px", backgroundColor: "var(--border)", borderRadius: "4px", overflow: "hidden", marginBottom: "16px" }}>
+                  <div style={{
+                    width: `${(uploadProgress.processed / uploadProgress.total) * 100}%`,
+                    height: "100%",
+                    backgroundColor: "#7C3AED",
+                    transition: "width 0.4s ease"
+                  }} />
+                </div>
+              )}
+
+              <div style={{ maxHeight: "220px", overflowY: "auto", border: "1px solid var(--border)", borderRadius: "8px" }}>
+                <table style={{ margin: 0, width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ backgroundColor: "var(--bg)", borderBottom: "1px solid var(--border)" }}>
+                      <th style={{ padding: "8px", textAlign: "left", fontSize: "11px" }}>File Name</th>
+                      <th style={{ padding: "8px", textAlign: "right", fontSize: "11px", width: "80px" }}>Size</th>
+                      <th style={{ padding: "8px", textAlign: "center", fontSize: "11px", width: "130px" }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {uploadQueue.map((item, idx) => (
+                      <tr key={idx} style={{ borderBottom: "1px solid var(--border)", fontSize: "12px" }}>
+                        <td style={{ padding: "8px", fontWeight: "600", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "250px" }}>
+                          {item.file.name}
+                        </td>
+                        <td style={{ padding: "8px", textAlign: "right", color: "var(--muted)" }}>
+                          {(item.file.size / 1024).toFixed(0)} KB
+                        </td>
+                        <td style={{ padding: "8px", textAlign: "center" }}>
+                          {item.status === "queued" && (
+                            <span style={{ padding: "2px 6px", borderRadius: "12px", backgroundColor: "#E5E7EB", color: "#4B5563", fontSize: "10px", fontWeight: "700" }}>
+                              Queued
+                            </span>
+                          )}
+                          {item.status === "processing" && (
+                            <span style={{ padding: "2px 6px", borderRadius: "12px", backgroundColor: "#DBEAFE", color: "#1E40AF", fontSize: "10px", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                              <span style={{ display: "inline-block", width: "6px", height: "6px", border: "1.5px solid #1E40AF", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }}></span>
+                              Screening...
+                            </span>
+                          )}
+                          {item.status === "done" && (
+                            <span style={{ padding: "2px 6px", borderRadius: "12px", backgroundColor: "#DEF7EC", color: "#03543F", fontSize: "10px", fontWeight: "800" }}>
+                              Done: {item.score}%
+                            </span>
+                          )}
+                          {item.status === "error" && (
+                            <span style={{ padding: "2px 6px", borderRadius: "12px", backgroundColor: "#FDE8E8", color: "#9B1C1C", fontSize: "10px", fontWeight: "700" }}>
+                              ⚠️ Failed
+                            </span>
+                          )}
+                          {item.status === "queued" && !isProcessing && (
+                            <button
+                              onClick={() => handleRemoveFromQueue(idx)}
+                              style={{
+                                background: "transparent",
+                                border: "none",
+                                color: "#EF4444",
+                                cursor: "pointer",
+                                marginLeft: "8px",
+                                fontSize: "12px",
+                                padding: "0"
+                              }}
+                              title="Remove file"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {!isProcessing && (
+                <div style={{ display: "flex", gap: "8px", marginTop: "16px", justifyContent: "flex-end" }}>
+                  <button
+                    className="secondary-btn"
+                    onClick={() => setUploadQueue([])}
+                    style={{ padding: "8px 16px" }}
+                  >
+                    Clear All
+                  </button>
+                  <button
+                    className="primary-btn"
+                    onClick={handleStartBatchProcessing}
+                    style={{ padding: "8px 16px", backgroundColor: "#7C3AED", borderColor: "#7C3AED" }}
+                  >
+                    Start Screening
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {message && <p className="form-message">{message}</p>}
+
+          {results.length > 0 && (
+            <div style={{ marginTop: "30px" }}>
+              <h3 style={{ marginBottom: "15px", fontWeight: "800" }}>Analysis Results ({results.length})</h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+                {[...results]
+                  .sort((a, b) => b.overall_score - a.overall_score)
+                  .map((res, index) => {
+                    const isBestMatch = index === 0 && results.length > 1;
+                    return (
+                      <div
+                        key={res.candidate_id || index}
+                        style={{
+                          padding: "20px",
+                          borderRadius: "16px",
+                          border: isBestMatch ? "2px solid #7C3AED" : "1px solid var(--border)",
+                          background: isBestMatch
+                            ? "linear-gradient(135deg, #ffffff, #f5f3ff)"
+                            : "var(--card-solid)",
+                          boxShadow: isBestMatch ? "0 4px 20px rgba(124, 58, 237, 0.15)" : "none",
+                          position: "relative",
+                          transition: "all 0.3s ease"
+                        }}
+                      >
+                        {isBestMatch && (
+                          <span
+                            style={{
+                              position: "absolute",
+                              top: "12px",
+                              right: "15px",
+                              background: "#7C3AED",
+                              color: "white",
+                              padding: "4px 10px",
+                              borderRadius: "20px",
+                              fontSize: "11px",
+                              fontWeight: "800",
+                              boxShadow: "0 2px 10px rgba(124, 58, 237, 0.3)"
+                            }}
+                          >
+                            🏆 Best Match
+                          </span>
+                        )}
+
+                        <h4
+                          style={{
+                            margin: "0 0 4px 0",
+                            fontSize: "18px",
+                            color: isBestMatch ? "#7C3AED" : "inherit",
+                            fontWeight: "800"
+                          }}
+                        >
+                          {res.name || "Unknown"}
+                        </h4>
+                        <p style={{ margin: "0 0 12px 0", fontSize: "13px", color: "var(--muted)" }}>
+                          {res.email || "No email"}
+                        </p>
+
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "repeat(4, 1fr)",
+                            gap: "10px",
+                            textAlign: "center"
+                          }}
+                        >
+                          <div style={{ background: "rgba(0,0,0,0.02)", padding: "8px", borderRadius: "8px" }}>
+                            <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>
+                              Skill Match
+                            </small>
+                            <strong style={{ fontSize: "13px" }}>{res.skill_score}%</strong>
+                          </div>
+                          <div style={{ background: "rgba(0,0,0,0.02)", padding: "8px", borderRadius: "8px" }}>
+                            <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>
+                              Similarity
+                            </small>
+                            <strong style={{ fontSize: "13px" }}>{res.similarity_score}%</strong>
+                          </div>
+                          <div style={{ background: "rgba(0,0,0,0.02)", padding: "8px", borderRadius: "8px" }}>
+                            <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>
+                              Experience
+                            </small>
+                            <strong style={{ fontSize: "13px" }}>{res.experience_years} Yrs</strong>
+                          </div>
+                          <div
+                            style={{
+                              background: isBestMatch ? "#ede9fe" : "rgba(124, 58, 237, 0.1)",
+                              padding: "8px",
+                              borderRadius: "8px"
+                            }}
+                          >
+                            <small
+                              style={{
+                                display: "block",
+                                color: "#7C3AED",
+                                fontSize: "10px",
+                                fontWeight: "700"
+                              }}
+                            >
+                              Overall Score
+                            </small>
+                            <strong style={{ fontSize: "14px", color: "#7C3AED", fontWeight: "900" }}>
+                              {res.overall_score}%
+                            </strong>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </section>
   );
 }
-
-function Activity({ icon, title, text, time }) {
-  return (
-    <div className="activity-item">
-      <div className="activity-icon">{icon}</div>
-      <div>
-        <h4>{title}</h4>
-        <p>{text}</p>
-      </div>
-      <span>{time}</span>
-    </div>
-  );
-}
-
-function JobRow({ icon, title, dept, candidates, status, date }) {
-  return (
-    <tr>
-      <td>
-        <span className="job-icon">{icon}</span>
-        {title}
-      </td>
-      <td>{dept}</td>
-      <td>{candidates}</td>
-      <td>
-        <span className={status === "Open" ? "status open" : "status closed"}>
-          {status}
-        </span>
-      </td>
-      <td>{date}</td>
-    </tr>
-  );
-}
-
 export default App;

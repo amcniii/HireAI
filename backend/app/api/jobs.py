@@ -4,6 +4,8 @@ from uuid import UUID
 
 from app.database.database import get_db
 from app.models.job import Job
+from app.models.candidate import Candidate
+from app.models.candidate_skill import CandidateSkill
 from app.schemas.job import JobCreate, JobUpdate
 
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
@@ -118,6 +120,15 @@ def delete_job(job_id: UUID, db: Session = Depends(get_db)):
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
+    # 1. Delete associated CandidateSkills
+    candidate_ids = [c.id for c in db.query(Candidate).filter(Candidate.job_id == job_id).all()]
+    if candidate_ids:
+        db.query(CandidateSkill).filter(CandidateSkill.candidate_id.in_(candidate_ids)).delete(synchronize_session=False)
+
+    # 2. Delete candidates
+    db.query(Candidate).filter(Candidate.job_id == job_id).delete(synchronize_session=False)
+
+    # 3. Delete job
     db.delete(job)
     db.commit()
 
