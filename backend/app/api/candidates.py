@@ -17,7 +17,10 @@ from app.services.resume_analyzer import (
     extract_phone,
     extract_name,
     extract_skills,
-    calculate_skill_score
+    calculate_skill_score,
+    extract_education,
+    extract_companies,
+    generate_ai_summary
 )
 from app.services.experience import (
     extract_experience_years,
@@ -83,11 +86,17 @@ def upload_resume(
         2
     )
 
+    education = extract_education(resume_text)
+    companies = extract_companies(resume_text)
+    ai_summary = generate_ai_summary(name, found_skills, experience_years, overall_score)
+
     candidate = Candidate(
         job_id=job_id,
         name=name,
         email=email,
         phone=phone,
+        education=education,
+        companies=companies,
         experience_years=experience_years,
         resume_text=resume_text,
         resume_file_url=file_path,
@@ -95,6 +104,7 @@ def upload_resume(
         similarity_score=similarity_score,
         experience_score=experience_score,
         overall_score=overall_score,
+        ai_summary=ai_summary,
         status="Processed"
     )
 
@@ -201,6 +211,49 @@ def get_candidates_by_job(job_id: UUID, db: Session = Depends(get_db)):
     }
 
 
+def ensure_candidate_details(candidate, skills, db):
+    updated = False
+
+    if candidate.experience_years == 0.0:
+        exp_years = extract_experience_years(candidate.resume_text)
+        if exp_years > 0.0:
+            candidate.experience_years = exp_years
+            job = db.query(Job).filter(Job.id == candidate.job_id).first()
+            if job:
+                exp_score = calculate_experience_score(exp_years, job.minimum_experience)
+                candidate.experience_score = exp_score
+                candidate.overall_score = round(
+                    (candidate.skill_score * 0.40) +
+                    (candidate.similarity_score * 0.35) +
+                    (exp_score * 0.25),
+                    2
+                )
+            candidate.ai_summary = None  # Force regenerate summary with updated experience
+            updated = True
+
+    if not candidate.education or candidate.education == []:
+        candidate.education = extract_education(candidate.resume_text)
+        updated = True
+
+    if not candidate.companies or candidate.companies == []:
+        candidate.companies = extract_companies(candidate.resume_text)
+        updated = True
+
+    if not candidate.ai_summary:
+        skill_list = [s.skill for s in skills]
+        candidate.ai_summary = generate_ai_summary(
+            candidate.name,
+            skill_list,
+            candidate.experience_years,
+            candidate.overall_score
+        )
+        updated = True
+
+    if updated:
+        db.commit()
+        db.refresh(candidate)
+
+
 @router.get("/{candidate_id}")
 def get_candidate_details(candidate_id: UUID, db: Session = Depends(get_db)):
     candidate = db.query(Candidate).filter(Candidate.id == candidate_id).first()
@@ -213,6 +266,8 @@ def get_candidate_details(candidate_id: UUID, db: Session = Depends(get_db)):
         .filter(CandidateSkill.candidate_id == candidate_id)
         .all()
     )
+
+    ensure_candidate_details(candidate, skills, db)
 
     return {
         "id": str(candidate.id),
@@ -284,6 +339,8 @@ def compare_candidates(
             .filter(CandidateSkill.candidate_id == candidate_id)
             .all()
         )
+
+        ensure_candidate_details(candidate, skills, db)
 
         results.append({
             "id": str(candidate.id),
