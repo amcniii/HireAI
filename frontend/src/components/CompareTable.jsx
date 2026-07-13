@@ -25,6 +25,12 @@ export default function CompareTable({ comparisonData }) {
     return JSON.stringify(data);
   };
 
+  const bestMatchCandidate = comparisonData && comparisonData.length > 0
+    ? comparisonData.reduce((best, current) => {
+        return (Number(current.overall_score || 0) > Number(best.overall_score || 0)) ? current : best;
+      }, comparisonData[0])
+    : null;
+
   return (
     <div style={{
       display: "flex",
@@ -40,7 +46,7 @@ export default function CompareTable({ comparisonData }) {
           ? cand.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
           : "CD";
           
-        const isBestMatch = idx === 0;
+        const isBestMatch = bestMatchCandidate && cand.id === bestMatchCandidate.id;
 
         return (
           <div key={cand.id} style={{

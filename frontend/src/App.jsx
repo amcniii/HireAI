@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import API from "./services/api";
 import "./styles/index.css";
 import { formatExperience } from "./utils/format";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import Dashboard from "./pages/Dashboard";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
@@ -18,6 +20,16 @@ function App() {
   const dropdownRef = useRef(null);
   const [notiOpen, setNotiOpen] = useState(false);
   const notiRef = useRef(null);
+  const [openCreateJobModalOnMount, setOpenCreateJobModalOnMount] = useState(false);
+
+  const navigateToPage = (page) => {
+    if (page === "Create Job") {
+      setActivePage("Jobs");
+      setOpenCreateJobModalOnMount(true);
+    } else {
+      setActivePage(page);
+    }
+  };
  
 
 
@@ -101,17 +113,6 @@ function App() {
       ),
     },
     {
-      id: "Create Job",
-      label: "Create Job",
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-          <line x1="12" y1="8" x2="12" y2="16" />
-          <line x1="8" y1="12" x2="16" y2="12" />
-        </svg>
-      ),
-    },
-    {
       id: "Candidates",
       label: "Candidates",
       icon: (
@@ -176,6 +177,7 @@ function App() {
 
   return (
     <div className="dashboard">
+      <ToastContainer position="top-right" autoClose={3000} theme="colored" />
 
       {/* Sidebar */}
 
@@ -203,7 +205,7 @@ function App() {
             <a
               key={item.id}
               className={activePage === item.id ? "active" : ""}
-              onClick={() => setActivePage(item.id)}
+              onClick={() => navigateToPage(item.id)}
             >
               {item.icon}
               <span>{item.label}</span>
@@ -248,17 +250,9 @@ function App() {
             ☰
           </button>
 
-          <div className="search">
 
-            🔍
 
-            <input
-              placeholder="Search jobs, candidates..."
-            />
-
-          </div>
-
-          <div className="admin-box">
+          <div className="admin-box" style={{ marginLeft: "auto" }}>
 
             {/* <div className="notification-bell-container" ref={notiRef}>
               <div className="notification-bell" onClick={() => setNotiOpen(!notiOpen)}>
@@ -357,11 +351,14 @@ function App() {
 
         </header>
 
-        {activePage === "Dashboard" && <Dashboard onNavigate={(page) => setActivePage(page)} />}
+        {activePage === "Dashboard" && <Dashboard onNavigate={navigateToPage} />}
        
-        {activePage === "Jobs" && <JobsPreview />}
-
-        {activePage === "Create Job" && <CreateJobPreview />}
+        {activePage === "Jobs" && (
+          <JobsPreview 
+            openCreateModal={openCreateJobModalOnMount}
+            onCloseCreateModal={() => setOpenCreateJobModalOnMount(false)}
+          />
+        )}
 
         {activePage === "Candidates" && <Candidates />}
         {activePage === "Upload Resume" && <UploadResumePreview />}
@@ -383,10 +380,12 @@ function App() {
 
 
 
-function JobsPreview() {
+function JobsPreview({ openCreateModal, onCloseCreateModal }) {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  
+  // Edit Job State
   const [editingJob, setEditingJob] = useState(null);
   const [editFormData, setEditFormData] = useState({
     title: "",
@@ -395,6 +394,28 @@ function JobsPreview() {
     optional_skills: "",
     minimum_experience: "",
   });
+
+  // Create Job State
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [createFormData, setCreateFormData] = useState({
+    title: "",
+    description: "",
+    required_skills: "",
+    optional_skills: "",
+    minimum_experience: "",
+  });
+
+  useEffect(() => {
+    fetchJobs();
+  }, []);
+
+  useEffect(() => {
+    if (openCreateModal) {
+      setIsCreateModalOpen(true);
+      onCloseCreateModal();
+    }
+  }, [openCreateModal]);
 
   const handleEditClick = (job) => {
     setEditingJob(job);
@@ -414,9 +435,15 @@ function JobsPreview() {
     });
   };
 
+  const handleCreateChange = (e) => {
+    setCreateFormData({
+      ...createFormData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
   const handleUpdateJob = async () => {
     try {
-      setMessage("");
       const payload = {
         title: editFormData.title,
         description: editFormData.description,
@@ -432,27 +459,64 @@ function JobsPreview() {
       };
 
       await API.put(`/jobs/${editingJob.id}`, payload);
-      setMessage("✅ Job updated successfully!");
+      toast.success("Job updated successfully!");
       setEditingJob(null);
       fetchJobs();
     } catch (error) {
       console.error(error);
-      setMessage("❌ Failed to update job.");
+      toast.error("Failed to update job.");
+    }
+  };
+
+  const handleCreateJob = async () => {
+    try {
+      setCreateLoading(true);
+
+      const payload = {
+        title: createFormData.title,
+        description: createFormData.description,
+        required_skills: createFormData.required_skills
+          .split(",")
+          .map((skill) => skill.trim())
+          .filter(Boolean),
+        optional_skills: createFormData.optional_skills
+          .split(",")
+          .map((skill) => skill.trim())
+          .filter(Boolean),
+        minimum_experience: Number(createFormData.minimum_experience),
+      };
+
+      await API.post("/jobs/", payload);
+      toast.success("Job created successfully!");
+      setIsCreateModalOpen(false);
+      setCreateFormData({
+        title: "",
+        description: "",
+        required_skills: "",
+        optional_skills: "",
+        minimum_experience: "",
+      });
+      fetchJobs();
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to create job. Check backend.");
+    } finally {
+      setCreateLoading(false);
     }
   };
 
   const fetchJobs = async () => {
     try {
       setLoading(true);
-      setMessage("");
 
       const response = await API.get("/jobs/");
       setJobs(response.data);
+      setCurrentPage(1);
 
-      setMessage("✅ Jobs loaded successfully");
+      toast.success("Jobs loaded successfully");
     } catch (error) {
       console.error(error);
-      setMessage("❌ Failed to load jobs. Make sure backend is running.");
+      toast.error("Failed to load jobs. Make sure backend is running.");
     } finally {
       setLoading(false);
     }
@@ -469,11 +533,10 @@ function JobsPreview() {
       await API.delete(`/jobs/${jobId}`);
 
       setJobs(jobs.filter((job) => job.id !== jobId));
-
-      setMessage("✅ Job deleted successfully");
+      toast.success("Job deleted successfully");
     } catch (error) {
       console.error(error);
-      setMessage("❌ Failed to delete job.");
+      toast.error("Failed to delete job.");
     }
   };
 
@@ -485,20 +548,19 @@ function JobsPreview() {
           <div>
             <h1>Job Management</h1>
             <p>
-              Manage job postings stored in PostgreSQL.
+              Manage job postings.
             </p>
           </div>
 
-          <button className="primary-btn" onClick={fetchJobs}>
-            Refresh Jobs
-          </button>
+          <div style={{ display: "flex", gap: "12px" }}>
+            <button className="secondary-btn" onClick={fetchJobs}>
+              Refresh Jobs
+            </button>
+            <button className="primary-btn" onClick={() => setIsCreateModalOpen(true)}>
+              ➕ Create Job
+            </button>
+          </div>
         </div>
-
-        {message && (
-          <p className="form-message">
-            {message}
-          </p>
-        )}
 
         {loading && (
           <p className="loading-text">
@@ -529,7 +591,7 @@ function JobsPreview() {
               </thead>
 
               <tbody>
-                {jobs.map((job) => (
+                {jobs.slice((currentPage - 1) * 10, currentPage * 10).map((job) => (
                   <tr key={job.id}>
                     <td>
                       <strong>{job.title}</strong>
@@ -551,22 +613,73 @@ function JobsPreview() {
                     <td style={{ display: "flex", gap: "8px" }}>
                       <button
                         className="primary-btn"
-                        style={{ padding: "6px 12px", fontSize: "12px", background: "#2563EB", borderColor: "#2563EB" }}
+                        style={{ padding: "8px", borderRadius: "8px", background: "#2563EB", borderColor: "#2563EB", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                         onClick={() => handleEditClick(job)}
+                        title="Edit Job"
                       >
-                        ✏️ Edit
+                        ✏️
                       </button>
                       <button
                         className="delete-btn"
+                        style={{ padding: "8px", borderRadius: "8px", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                         onClick={() => deleteJob(job.id)}
+                        title="Delete Job"
                       >
-                        🗑 Delete
+                        🗑
                       </button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+
+            {jobs.length > 10 && (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "16px", padding: "8px 0" }}>
+                <div style={{ fontSize: "14px", color: "var(--muted)", fontWeight: "500" }}>
+                  Showing {(currentPage - 1) * 10 + 1} to {Math.min(currentPage * 10, jobs.length)} of {jobs.length} entries
+                </div>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                  <button 
+                    className="secondary-btn" 
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    style={{ padding: "6px 12px", fontSize: "13px" }}
+                  >
+                    Previous
+                  </button>
+                  
+                  {Array.from({ length: Math.ceil(jobs.length / 10) }, (_, i) => i + 1).map(page => (
+                    <button
+                      key={page}
+                      className={currentPage === page ? "primary-btn" : "secondary-btn"}
+                      onClick={() => setCurrentPage(page)}
+                      style={{ 
+                        width: "32px", 
+                        height: "32px", 
+                        padding: 0, 
+                        display: "flex", 
+                        alignItems: "center", 
+                        justifyContent: "center", 
+                        fontSize: "13px",
+                        background: currentPage === page ? "var(--primary)" : "",
+                        color: currentPage === page ? "#ffffff" : ""
+                      }}
+                    >
+                      {page}
+                    </button>
+                  ))}
+
+                  <button 
+                    className="secondary-btn" 
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(jobs.length / 10)))}
+                    disabled={currentPage === Math.ceil(jobs.length / 10)}
+                    style={{ padding: "6px 12px", fontSize: "13px" }}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -590,7 +703,7 @@ function JobsPreview() {
             maxHeight: "90vh",
             overflowY: "auto",
             padding: "24px",
-            background: "var(--bg-panel)",
+            background: "var(--card-solid)",
             borderRadius: "12px",
             boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
           }}>
@@ -664,190 +777,99 @@ function JobsPreview() {
           </div>
         </div>
       )}
-    </section>
-  );
-}
 
+      {isCreateModalOpen && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(0,0,0,0.5)",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          zIndex: 1000
+        }}>
+          <div className="panel" style={{
+            width: "500px",
+            maxHeight: "90vh",
+            overflowY: "auto",
+            padding: "24px",
+            background: "var(--card-solid)",
+            borderRadius: "12px",
+            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+          }}>
+            <h2>Create Job</h2>
+            <div className="mini-section" style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "16px" }}>
+              <div>
+                <label style={{ fontSize: "14px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Job Title</label>
+                <input
+                  name="title"
+                  placeholder="Job Title"
+                  value={createFormData.title}
+                  onChange={handleCreateChange}
+                  style={{ width: "100%" }}
+                />
+              </div>
 
-function CreateJobPreview() {
-  const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    required_skills: "",
-    optional_skills: "",
-    minimum_experience: "",
-  });
+              <div>
+                <label style={{ fontSize: "14px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Job Description</label>
+                <textarea
+                  name="description"
+                  placeholder="Job Description"
+                  value={createFormData.description}
+                  onChange={handleCreateChange}
+                  style={{ width: "100%", height: "100px" }}
+                />
+              </div>
 
-  const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
+              <div>
+                <label style={{ fontSize: "14px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Required Skills (comma separated)</label>
+                <input
+                  name="required_skills"
+                  placeholder="Required Skills: React, Python, FastAPI"
+                  value={createFormData.required_skills}
+                  onChange={handleCreateChange}
+                  style={{ width: "100%" }}
+                />
+              </div>
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
+              <div>
+                <label style={{ fontSize: "14px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Optional Skills (comma separated)</label>
+                <input
+                  name="optional_skills"
+                  placeholder="Optional Skills: Docker, AWS"
+                  value={createFormData.optional_skills}
+                  onChange={handleCreateChange}
+                  style={{ width: "100%" }}
+                />
+              </div>
 
-  const handleCreateJob = async () => {
-    try {
-      setLoading(true);
-      setMessage("");
+              <div>
+                <label style={{ fontSize: "14px", fontWeight: "600", display: "block", marginBottom: "4px" }}>Minimum Experience (years)</label>
+                <input
+                  name="minimum_experience"
+                  type="number"
+                  placeholder="Minimum Experience"
+                  value={createFormData.minimum_experience}
+                  onChange={handleCreateChange}
+                  style={{ width: "100%" }}
+                />
+              </div>
 
-      const payload = {
-        title: formData.title,
-        description: formData.description,
-        required_skills: formData.required_skills
-          .split(",")
-          .map((skill) => skill.trim())
-          .filter(Boolean),
-        optional_skills: formData.optional_skills
-          .split(",")
-          .map((skill) => skill.trim())
-          .filter(Boolean),
-        minimum_experience: Number(formData.minimum_experience),
-      };
-
-      await API.post("/jobs/", payload);
-
-      setMessage("✅ Job created successfully!");
-
-      setFormData({
-        title: "",
-        description: "",
-        required_skills: "",
-        optional_skills: "",
-        minimum_experience: "",
-      });
-    } catch (error) {
-      console.error(error);
-      setMessage("❌ Failed to create job. Check backend.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <section className="placeholder-page">
-      <div className="panel">
-        <h1>Create Job</h1>
-        <p>Create a new job role for AI-powered resume matching.</p>
-
-        <div className="mini-section">
-          <input
-            name="title"
-            placeholder="Job Title"
-            value={formData.title}
-            onChange={handleChange}
-          />
-
-          <textarea
-            name="description"
-            placeholder="Job Description"
-            value={formData.description}
-            onChange={handleChange}
-          />
-
-          <input
-            name="required_skills"
-            placeholder="Required Skills: React, Python, FastAPI"
-            value={formData.required_skills}
-            onChange={handleChange}
-          />
-
-          <input
-            name="optional_skills"
-            placeholder="Optional Skills: Docker, AWS"
-            value={formData.optional_skills}
-            onChange={handleChange}
-          />
-
-          <input
-            name="minimum_experience"
-            type="number"
-            placeholder="Minimum Experience"
-            value={formData.minimum_experience}
-            onChange={handleChange}
-          />
-
-          <button className="primary-btn" onClick={handleCreateJob}>
-            {loading ? "Creating..." : "Create Job"}
-          </button>
-
-          {message && <p className="form-message">{message}</p>}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-
-function CandidatesPreview() {
-  const [candidates, setCandidates] = useState([]);
-  const [message, setMessage] = useState("");
-
-  const fetchCandidates = async () => {
-    try {
-      const response = await API.get("/candidates/");
-      setCandidates(response.data);
-      setMessage("✅ Candidates loaded successfully");
-    } catch (error) {
-      console.error(error);
-      setMessage("❌ Failed to load candidates");
-    }
-  };
-
-  return (
-    <section className="placeholder-page">
-      <div className="panel">
-        <div className="panel-head">
-          <div>
-            <h1>Candidates</h1>
-            <p>View AI-ranked candidates from your backend.</p>
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "12px" }}>
+                <button className="secondary-btn" onClick={() => setIsCreateModalOpen(false)}>
+                  Cancel
+                </button>
+                <button className="primary-btn" onClick={handleCreateJob} disabled={createLoading}>
+                  {createLoading ? "Creating..." : "Create Job"}
+                </button>
+              </div>
+            </div>
           </div>
-
-          <button className="primary-btn" onClick={fetchCandidates}>
-            Load Candidates
-          </button>
         </div>
-
-        {message && <p className="form-message">{message}</p>}
-
-        {candidates.length > 0 && (
-          <div className="table-panel">
-            <table>
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Skill Score</th>
-                  <th>Similarity</th>
-                  <th>Overall</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {candidates.map((candidate) => (
-                  <tr key={candidate.id}>
-                    <td>{candidate.name || "Unknown"}</td>
-                    <td>{candidate.email || "Not found"}</td>
-                    <td>{candidate.skill_score}</td>
-                    <td>{candidate.similarity_score}</td>
-                    <td>
-                      <strong>{candidate.overall_score}</strong>
-                    </td>
-                    <td>
-                      <span className="status open">
-                        {candidate.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      )}
     </section>
   );
 }
@@ -862,6 +884,7 @@ function UploadResumePreview() {
   const [results, setResults] = useState([]);
   const [comparisonData, setComparisonData] = useState([]);
   const [dragActive, setDragActive] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     fetchJobs();
@@ -992,6 +1015,7 @@ function UploadResumePreview() {
 
     setResults(uploadedResults);
     setUploading(false);
+    setCurrentPage(1);
 
     const successCount = selectedFiles.filter(f => f.status === "success" || uploadedResults.some(r => r.file_name === f.name)).length;
     if (successCount === selectedFiles.length) {
@@ -1144,6 +1168,58 @@ function UploadResumePreview() {
             </div>
           )}
 
+          {jobId && (
+            (() => {
+              const selectedJob = jobs.find(j => j.id === jobId);
+              if (!selectedJob) return null;
+              return (
+                <div style={{
+                  marginTop: "24px",
+                  padding: "20px",
+                  background: "var(--hover-bg)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "16px",
+                }}>
+                  <h4 style={{ fontWeight: 800, color: "var(--text-primary)", marginBottom: "12px", fontSize: "15px" }}>
+                    Selected Job Details
+                  </h4>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    <div>
+                      <span style={{ fontSize: "12px", color: "var(--muted)", fontWeight: "600", display: "block" }}>Job Title</span>
+                      <strong style={{ fontSize: "14px", color: "var(--text-primary)" }}>{selectedJob.title}</strong>
+                    </div>
+                    {selectedJob.description && (
+                      <div>
+                        <span style={{ fontSize: "12px", color: "var(--muted)", fontWeight: "600", display: "block" }}>Description</span>
+                        <p style={{ fontSize: "13px", color: "var(--text-secondary)", margin: "4px 0 0", lineHeight: "1.5" }}>{selectedJob.description}</p>
+                      </div>
+                    )}
+                    <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
+                      {selectedJob.required_skills && selectedJob.required_skills.length > 0 && (
+                        <div style={{ minWidth: "150px" }}>
+                          <span style={{ fontSize: "12px", color: "var(--muted)", fontWeight: "600", display: "block", marginBottom: "4px" }}>Required Skills</span>
+                          <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+                            {selectedJob.required_skills.map((skill, idx) => (
+                              <span key={idx} style={{ background: "#ede9fe", color: "#7c3aed", fontSize: "11px", padding: "2px 6px", borderRadius: "4px", fontWeight: "700" }}>
+                                {skill}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {selectedJob.minimum_experience !== undefined && (
+                        <div>
+                          <span style={{ fontSize: "12px", color: "var(--muted)", fontWeight: "600", display: "block" }}>Min Experience</span>
+                          <strong style={{ fontSize: "14px", color: "var(--text-primary)" }}>{selectedJob.minimum_experience} Years</strong>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()
+          )}
+
           {message && <p className="form-message" style={{ textAlign: "center", margin: "20px 0" }}>{message}</p>}
 
           {/* Side-by-side Candidate Comparison */}
@@ -1170,7 +1246,7 @@ function UploadResumePreview() {
                       </tr>
                     </thead>
                     <tbody>
-                      {results.map((res, index) => (
+                      {results.slice((currentPage - 1) * 10, currentPage * 10).map((res, index) => (
                         <tr key={res.candidate_id || index}>
                           <td><strong>{res.name || "Unknown"}</strong></td>
                           <td>{res.email || "Not found"}</td>
@@ -1199,6 +1275,54 @@ function UploadResumePreview() {
                       ))}
                     </tbody>
                   </table>
+
+                  {results.length > 10 && (
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "16px", padding: "8px 0" }}>
+                      <div style={{ fontSize: "14px", color: "var(--muted)", fontWeight: "500" }}>
+                        Showing {(currentPage - 1) * 10 + 1} to {Math.min(currentPage * 10, results.length)} of {results.length} entries
+                      </div>
+                      <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                        <button 
+                          className="secondary-btn" 
+                          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                          disabled={currentPage === 1}
+                          style={{ padding: "6px 12px", fontSize: "13px" }}
+                        >
+                          Previous
+                        </button>
+                        
+                        {Array.from({ length: Math.ceil(results.length / 10) }, (_, i) => i + 1).map(page => (
+                          <button
+                            key={page}
+                            className={currentPage === page ? "primary-btn" : "secondary-btn"}
+                            onClick={() => setCurrentPage(page)}
+                            style={{ 
+                              width: "32px", 
+                              height: "32px", 
+                              padding: 0, 
+                              display: "flex", 
+                              alignItems: "center", 
+                              justifyContent: "center", 
+                              fontSize: "13px",
+                              background: currentPage === page ? "var(--primary)" : "",
+                              color: currentPage === page ? "#ffffff" : ""
+                            }}
+                          >
+                            {page}
+                          </button>
+                        ))}
+
+                        <button 
+                          className="secondary-btn" 
+                          onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(results.length / 10)))}
+                          disabled={currentPage === Math.ceil(results.length / 10)}
+                          style={{ padding: "6px 12px", fontSize: "13px" }}
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import API from "../services/api";
 import "../styles/settings.css";
+import { toast } from "react-toastify";
 
 export default function Settings() {
   const sections = [
@@ -414,10 +415,10 @@ export default function Settings() {
     if (!window.confirm("⚠️ WARNING: Are you sure you want to delete ALL candidates? This action cannot be undone.")) return;
     try {
       await API.delete("/settings/danger/resumes");
-      setMessage("💥 All candidates have been deleted successfully.");
+      toast.success("All candidates have been deleted successfully.");
     } catch (err) {
       console.error(err);
-      setError("❌ Delete action failed.");
+      toast.error("Delete action failed.");
     }
   };
 
@@ -425,10 +426,10 @@ export default function Settings() {
     if (!window.confirm("⚠️ WARNING: Are you sure you want to delete ALL jobs and candidates? Your workspace will be completely reset!")) return;
     try {
       await API.delete("/settings/danger/workspace");
-      setMessage("💥 Workspace successfully cleared. All jobs and candidates deleted.");
+      toast.success("Workspace successfully cleared. All jobs and candidates deleted.");
     } catch (err) {
       console.error(err);
-      setError("❌ Clear workspace action failed.");
+      toast.error("Clear workspace action failed.");
     }
   };
 
@@ -441,7 +442,7 @@ export default function Settings() {
       window.location.reload();
     } catch (err) {
       console.error(err);
-      setError("❌ Account deletion failed.");
+      toast.error("Account deletion failed.");
     }
   };
 

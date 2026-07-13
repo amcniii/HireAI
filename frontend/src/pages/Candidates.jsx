@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import API from "../services/api";
 import { formatExperience } from "../utils/format";
+import { toast } from "react-toastify";
 
 const getJobBadgeStyle = (title) => {
   const t = (title || "").toLowerCase();
@@ -37,9 +38,55 @@ const getJobBadgeStyle = (title) => {
   };
 };
 
+const getStatusStyle = (status) => {
+  const s = (status || "").toLowerCase();
+  let bg = "#ede9fe";
+  let color = "#7c3aed";
+  let border = "1px solid #c084fc";
+
+  if (s === "processed") {
+    bg = "#e2e8f0";
+    color = "#475569";
+    border = "1px solid #cbd5e1";
+  } else if (s === "shortlisted") {
+    bg = "#fef3c7";
+    color = "#d97706";
+    border = "1px solid #fde68a";
+  } else if (s === "interview") {
+    bg = "#dbeafe";
+    color = "#2563eb";
+    border = "1px solid #bfdbfe";
+  } else if (s === "rejected") {
+    bg = "#fee2e2";
+    color = "#dc2626";
+    border = "1px solid #fca5a5";
+  } else if (s === "hired") {
+    bg = "#dcfce7";
+    color = "#16a34a";
+    border = "1px solid #bbf7d0";
+  }
+
+  return {
+    backgroundColor: bg,
+    color: color,
+    border: border,
+    padding: "5px 24px 5px 12px",
+    borderRadius: "20px",
+    fontSize: "12px",
+    fontWeight: "700",
+    cursor: "pointer",
+    outline: "none",
+    appearance: "none",
+    backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='${encodeURIComponent(color)}' d='M0,0 L5,5 L10,0 Z'/></svg>")`,
+    backgroundRepeat: "no-repeat",
+    backgroundPosition: "right 10px center",
+    backgroundSize: "8px 5px",
+  };
+};
+
 export default function Candidates() {
   const [candidates, setCandidates] = useState([]);
-  const [message, setMessage] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   const loadCandidates = async () => {
     try {
@@ -50,10 +97,11 @@ export default function Candidates() {
       );
 
       setCandidates(sorted);
-      setMessage("✅ Candidates loaded successfully");
+      setCurrentPage(1);
+      toast.success("Candidates loaded successfully");
     } catch (error) {
       console.error(error);
-      setMessage("❌ Failed to load candidates");
+      toast.error("Failed to load candidates");
     }
   };
 
@@ -70,11 +118,10 @@ export default function Candidates() {
       setCandidates((prev) =>
         prev.filter((candidate) => candidate.id !== id)
       );
-
-      setMessage("✅ Candidate deleted successfully");
+      toast.success("Candidate deleted successfully");
     } catch (error) {
       console.error(error);
-      setMessage("❌ Failed to delete candidate");
+      toast.error("Failed to delete candidate");
     }
   };
 
@@ -92,10 +139,10 @@ export default function Candidates() {
         )
       );
 
-      setMessage("✅ Candidate status updated");
+      toast.success("Status updated to " + status);
     } catch (error) {
       console.error(error);
-      setMessage("❌ Failed to update status");
+      toast.error("Failed to update status");
     }
   };
 
@@ -117,8 +164,6 @@ export default function Candidates() {
           </button>
         </div>
 
-        {message && <p className="form-message">{message}</p>}
-
         {candidates.length > 0 && (
           <div className="table-panel">
             <table>
@@ -137,17 +182,19 @@ export default function Candidates() {
               </thead>
 
               <tbody>
-                {candidates.map((candidate, index) => (
-                  <tr key={candidate.id}>
-                    <td>
-                      {index === 0
-                        ? "🥇 1"
-                        : index === 1
-                        ? "🥈 2"
-                        : index === 2
-                        ? "🥉 3"
-                        : index + 1}
-                    </td>
+                {candidates.slice((currentPage - 1) * 10, currentPage * 10).map((candidate, index) => {
+                  const globalIndex = (currentPage - 1) * 10 + index;
+                  return (
+                    <tr key={candidate.id}>
+                      <td>
+                        {globalIndex === 0
+                          ? "🥇 1"
+                          : globalIndex === 1
+                          ? "🥈 2"
+                          : globalIndex === 2
+                          ? "🥉 3"
+                          : globalIndex + 1}
+                      </td>
 
                     <td>{candidate.name || "Unknown"}</td>
                     <td>
@@ -175,6 +222,7 @@ export default function Candidates() {
                         onChange={(e) =>
                           updateStatus(candidate.id, e.target.value)
                         }
+                        style={getStatusStyle(candidate.status)}
                       >
                         <option>Processed</option>
                         <option>Shortlisted</option>
@@ -187,15 +235,66 @@ export default function Candidates() {
                     <td>
                       <button
                         className="delete-btn"
+                        style={{ padding: "8px", borderRadius: "8px", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                         onClick={() => deleteCandidate(candidate.id)}
+                        title="Delete Candidate"
                       >
-                        Delete
+                        🗑
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
+
+            {candidates.length > 10 && (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "16px", padding: "8px 0" }}>
+                <div style={{ fontSize: "14px", color: "var(--muted)", fontWeight: "500" }}>
+                  Showing {(currentPage - 1) * 10 + 1} to {Math.min(currentPage * 10, candidates.length)} of {candidates.length} entries
+                </div>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                  <button 
+                    className="secondary-btn" 
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    style={{ padding: "6px 12px", fontSize: "13px" }}
+                  >
+                    Previous
+                  </button>
+                  
+                  {Array.from({ length: Math.ceil(candidates.length / 10) }, (_, i) => i + 1).map(page => (
+                    <button
+                      key={page}
+                      className={currentPage === page ? "primary-btn" : "secondary-btn"}
+                      onClick={() => setCurrentPage(page)}
+                      style={{ 
+                        width: "32px", 
+                        height: "32px", 
+                        padding: 0, 
+                        display: "flex", 
+                        alignItems: "center", 
+                        justifyContent: "center", 
+                        fontSize: "13px",
+                        background: currentPage === page ? "var(--primary)" : "",
+                        color: currentPage === page ? "#ffffff" : ""
+                      }}
+                    >
+                      {page}
+                    </button>
+                  ))}
+
+                  <button 
+                    className="secondary-btn" 
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(candidates.length / 10)))}
+                    disabled={currentPage === Math.ceil(candidates.length / 10)}
+                    style={{ padding: "6px 12px", fontSize: "13px" }}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

@@ -195,14 +195,14 @@ body.dark .hero-widget-box {
   font-size: 13.5px;
   font-weight: 600;
   color: var(--muted);
-  margin: 0 0 4px;
+  margin: 0 0 2px;
 }
 
 .stat-info h2 {
   font-size: 24px;
   font-weight: 800;
   color: var(--text-primary);
-  margin: 0 0 4px;
+  margin: 0 0 2px;
   line-height: 1.1;
 }
 
