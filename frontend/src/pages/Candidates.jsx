@@ -2,6 +2,41 @@ import { useEffect, useState } from "react";
 import API from "../services/api";
 import { formatExperience } from "../utils/format";
 
+const getJobBadgeStyle = (title) => {
+  const t = (title || "").toLowerCase();
+  let gradient = "linear-gradient(135deg, #64748b, #475569)";
+  let shadow = "rgba(100, 116, 139, 0.25)";
+
+  if (t.includes("ai")) {
+    gradient = "linear-gradient(135deg, #3b82f6, #1d4ed8)";
+    shadow = "rgba(37, 99, 235, 0.3)";
+  } else if (t.includes("python")) {
+    gradient = "linear-gradient(135deg, #8b5cf6, #6d28d9)";
+    shadow = "rgba(124, 58, 237, 0.3)";
+  } else if (t.includes("full stack") || t.includes("fullstack")) {
+    gradient = "linear-gradient(135deg, #06b6d4, #0891b2)";
+    shadow = "rgba(8, 145, 178, 0.3)";
+  } else if (t.includes("uiux") || t.includes("design") || t.includes("ui") || t.includes("ux")) {
+    gradient = "linear-gradient(135deg, #ec4899, #db2777)";
+    shadow = "rgba(219, 39, 119, 0.3)";
+  }
+
+  return {
+    background: gradient,
+    color: "#ffffff",
+    padding: "5px 12px",
+    borderRadius: "20px",
+    fontSize: "11px",
+    fontWeight: "700",
+    letterSpacing: "0.5px",
+    display: "inline-block",
+    whiteSpace: "nowrap",
+    boxShadow: `0 4px 10px ${shadow}`,
+    textShadow: "0 1px 2px rgba(0, 0, 0, 0.15)",
+    textTransform: "uppercase"
+  };
+};
+
 export default function Candidates() {
   const [candidates, setCandidates] = useState([]);
   const [message, setMessage] = useState("");
@@ -91,6 +126,7 @@ export default function Candidates() {
                 <tr>
                   <th>Rank</th>
                   <th>Name</th>
+                  <th>Job Role</th>
                   <th>Email</th>
                   <th>Overall Score</th>
                   <th>Skill Match</th>
@@ -114,7 +150,11 @@ export default function Candidates() {
                     </td>
 
                     <td>{candidate.name || "Unknown"}</td>
-
+                    <td>
+                      <span style={getJobBadgeStyle(candidate.job_title)}>
+                        {candidate.job_title || "Unknown Role"}
+                      </span>
+                    </td>
                     <td>{candidate.email || "Not Found"}</td>
 
                     <td>

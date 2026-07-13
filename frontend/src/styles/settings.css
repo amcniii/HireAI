@@ -122,7 +122,7 @@
   background: #1d4ed8;
 }
 
-.secondary-btn {
+.settings-page .secondary-btn {
   display: block;
   width: 100%;
   background: white;
@@ -134,7 +134,7 @@
   transition: .25s;
 }
 
-.secondary-btn:hover {
+.settings-page .secondary-btn:hover {
   background: #f9fafb;
 }
 
