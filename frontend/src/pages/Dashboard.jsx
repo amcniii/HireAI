@@ -196,50 +196,69 @@ function Dashboard({ onNavigate }) {
   return (
     <div className="dashboard-page">
       
-      {/* 1. HERO SECTION */}
+      {/* 1. HERO SECTION (SPACE REPLICA DESIGN) */}
       <section className="hero">
         <div className="hero-left">
-          <span className="hero-tag">Good Evening, HR Admin 👋</span>
-          <h1>Welcome back!</h1>
-          <p>
-            Manage jobs, upload resumes, compare candidates and track AI-based hiring performance from one place.
+          <span className="hero-tag">AI-POWERED SCREENING PLATFORM 🚀</span>
+          <h1 style={{ fontSize: "36px", fontWeight: "900", lineHeight: "1.2", marginBottom: "16px" }}>
+            Screen & Match Resumes <span style={{ color: "var(--blue)" }}>That Work</span> <span style={{ color: "var(--primary)" }}>as Hard as You Do.</span>
+          </h1>
+          <p style={{ color: "var(--text-secondary)", fontSize: "14px", lineHeight: "1.6", marginBottom: "24px" }}>
+            HireAI stands out as the best resume intelligence system, specializing in parsing, grading, and matching candidate resumes with custom job requirements. With real-time scoring and semantic analysis, we offer exceptional screening tools to match applicants and locate top talent.
           </p>
+          <div className="hero-actions" style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+            <button className="primary-btn" onClick={() => onNavigate("Upload Resume")} style={{ padding: "12px 28px", fontSize: "14px" }}>
+              Let's Get Started &rarr;
+            </button>
+            <button className="secondary-btn" onClick={() => onNavigate("Create Job")} style={{ padding: "12px 28px", fontSize: "14px" }}>
+              Create a Job Role
+            </button>
+          </div>
         </div>
-        <div className="hero-right">
-          <div className="hero-widget-box">
-            <div className="robot">🤖</div>
-            <div className="hero-chart-card">
-              <svg viewBox="0 0 200 100" width="100%" height="100%">
-                <defs>
-                  <linearGradient id="heroGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#4f46e5" stopOpacity="0.25" />
-                    <stop offset="100%" stopColor="#4f46e5" stopOpacity="0.0" />
-                  </linearGradient>
-                </defs>
-                <path d="M 10 90 L 10 65 L 40 45 L 70 75 L 100 35 L 130 55 L 160 25 L 190 15 L 190 90 Z" fill="url(#heroGradient)" />
-                <path d="M 10 65 L 40 45 L 70 75 L 100 35 L 130 55 L 160 25 L 190 15" fill="none" stroke="#4f46e5" strokeWidth="3" strokeLinecap="round" />
-                <circle cx="190" cy="15" r="4" fill="#4f46e5" stroke="#ffffff" strokeWidth="1.5" />
-                <circle cx="100" cy="35" r="4" fill="#4f46e5" stroke="#ffffff" strokeWidth="1.5" />
-              </svg>
+        <div className="hero-right" style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+          <div className="hero-right-showcase" style={{
+            background: "linear-gradient(135deg, #06b6d4, #8b5cf6)",
+            padding: "24px",
+            borderRadius: "16px",
+            width: "100%",
+            maxWidth: "280px",
+            boxShadow: "0 10px 40px rgba(6, 182, 212, 0.3)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "12px"
+          }}>
+            {/* Miniature Laptop Preview */}
+            <div className="laptop-preview" style={{
+              background: "#0f172a",
+              borderRadius: "10px",
+              padding: "16px",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+              boxShadow: "inset 0 1px 3px rgba(255,255,255,0.1)"
+            }}>
+              <div className="preview-header" style={{ display: "flex", gap: "6px", marginBottom: "12px", alignItems: "center" }}>
+                <span className="dot" style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#ef4444" }}></span>
+                <span className="dot" style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#eab308" }}></span>
+                <span className="dot" style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#22c55e" }}></span>
+                <span className="preview-title" style={{ fontSize: "10px", color: "#64748b", marginLeft: "6px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.5px" }}>AI Match Analyzer</span>
+              </div>
+              <div className="preview-body" style={{ color: "#ffffff" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", marginBottom: "4px", fontWeight: "600" }}>
+                  <span>Match Confidence</span>
+                  <span style={{ color: "#06b6d4", fontWeight: "800" }}>94.8%</span>
+                </div>
+                <div style={{ background: "rgba(255,255,255,0.05)", borderRadius: "999px", height: "6px", overflow: "hidden", marginBottom: "12px" }}>
+                  <div style={{ background: "linear-gradient(90deg, #06b6d4, #8b5cf6)", height: "100%", width: "94.8%" }}></div>
+                </div>
+                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                  <span style={{ background: "rgba(6, 182, 212, 0.15)", color: "#06b6d4", fontSize: "9px", padding: "3px 8px", borderRadius: "999px", fontWeight: "700" }}>Python</span>
+                  <span style={{ background: "rgba(139, 92, 246, 0.15)", color: "#c084fc", fontSize: "9px", padding: "3px 8px", borderRadius: "999px", fontWeight: "700" }}>FastAPI</span>
+                  <span style={{ background: "rgba(255, 255, 255, 0.1)", color: "#ffffff", fontSize: "9px", padding: "3px 8px", borderRadius: "999px", fontWeight: "700" }}>React</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
-
-      {/* Hero Buttons (Below Welcome Box) */}
-      <div className="hero-buttons" style={{ display: "flex", gap: "12px", marginTop: "-4px", marginBottom: "4px" }}>
-        <button className="primary-btn" onClick={() => onNavigate("Create Job")}>
-          + Create Job
-        </button>
-        <button className="secondary-btn" onClick={() => onNavigate("Upload Resume")}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: "6px", verticalAlign: "middle" }}>
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="17 8 12 3 7 8" />
-            <line x1="12" y1="3" x2="12" y2="15" />
-          </svg>
-          Upload Resume
-        </button>
-      </div>
 
       {/* 2. STATS SECTION */}
       <section className="stats">

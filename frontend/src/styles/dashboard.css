@@ -1,11 +1,11 @@
 .dashboard-page {
   flex: 1;
-  padding: 24px;
-  background: var(--bg);
+  padding: 32px 40px;
+  background: transparent;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 32px;
 }
 
 /* ==========================================================================
@@ -15,18 +15,18 @@
   display: grid;
   grid-template-columns: 1.3fr 0.7fr;
   align-items: center;
-  background: linear-gradient(135deg, rgba(237, 242, 255, 0.9), rgba(248, 239, 255, 0.9));
-  border-radius: 24px;
-  padding: 28px 36px;
-  min-height: 180px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(6, 182, 212, 0.08));
+  border-radius: 12px;
+  padding: 40px 48px;
   box-shadow: 0 10px 30px rgba(99, 102, 241, 0.05);
-  border: 1px solid rgba(229, 234, 243, 0.5);
+  border: 1px solid rgba(99, 102, 241, 0.15);
   position: relative;
+  backdrop-filter: blur(20px);
 }
 
 body.dark .dashboard-page .hero {
-  background: linear-gradient(135deg, rgba(30, 27, 75, 0.4), rgba(58, 28, 96, 0.4));
-  border-color: rgba(30, 41, 59, 0.5);
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.12), rgba(139, 92, 246, 0.12));
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 .dashboard-page .hero-left {
@@ -42,11 +42,14 @@ body.dark .dashboard-page .hero {
 }
 
 .dashboard-page .hero h1 {
-  font-size: 32px;
+  font-size: 36px;
   font-weight: 900;
   line-height: 1.2;
   margin: 0 0 10px;
-  color: var(--text-primary);
+  background: linear-gradient(135deg, var(--blue), var(--primary));
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .dashboard-page .hero p {
@@ -61,43 +64,7 @@ body.dark .dashboard-page .hero {
   gap: 12px;
 }
 
-.primary-btn {
-  background: linear-gradient(135deg, var(--blue), #9333ea);
-  color: white;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 12px;
-  font-weight: 700;
-  font-size: 13.5px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 15px rgba(124, 58, 237, 0.2);
-}
-
-.primary-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.3);
-}
-
-.secondary-btn {
-  background: var(--card-solid);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
-  padding: 10px 20px;
-  border-radius: 12px;
-  font-weight: 700;
-  font-size: 13.5px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  box-shadow: var(--shadow);
-}
-
-.secondary-btn:hover {
-  transform: translateY(-2px);
-  background: var(--hover-bg);
-}
+/* Inherit global .primary-btn and .secondary-btn from index.css */
 
 .dashboard-page .hero-right {
   display: flex;
@@ -134,28 +101,7 @@ body.dark .hero-widget-box {
 /* ==========================================================================
    2. STATS CARD GRID
    ========================================================================== */
-.dashboard-page .stats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-}
-
-.dashboard-page .stat-card {
-  background: var(--card-solid);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 20px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  box-shadow: var(--shadow);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.dashboard-page .stat-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
-}
+/* Inherit global stats and stat-card styling from index.css */
 
 .stat-icon-wrapper {
   width: 52px;
@@ -226,13 +172,14 @@ body.dark .hero-widget-box {
    3. SHARED PANEL STYLING
    ========================================================================== */
 .dashboard-page .panel {
-  background: var(--card-solid);
+  background: var(--card);
   border: 1px solid var(--border);
   border-radius: 20px;
   padding: 20px;
   box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
+  backdrop-filter: blur(20px);
 }
 
 .panel h3 {
