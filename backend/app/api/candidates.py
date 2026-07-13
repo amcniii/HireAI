@@ -153,12 +153,15 @@ def upload_resume(
 
 @router.get("/")
 def get_all_candidates(db: Session = Depends(get_db)):
-    candidates = db.query(Candidate).order_by(Candidate.overall_score.desc()).all()
+    results = db.query(Candidate, Job.title).outerjoin(Job, Candidate.job_id == Job.id).order_by(Candidate.overall_score.desc()).all()
 
-    return [
-        {
+    response_data = []
+    for candidate, job_title in results:
+        skills = db.query(CandidateSkill).filter(CandidateSkill.candidate_id == candidate.id).all()
+        response_data.append({
             "id": str(candidate.id),
             "job_id": str(candidate.job_id),
+            "job_title": job_title or "Unknown Role",
             "name": candidate.name,
             "email": candidate.email,
             "phone": candidate.phone,
@@ -168,10 +171,10 @@ def get_all_candidates(db: Session = Depends(get_db)):
             "experience_score": candidate.experience_score,
             "experience_years": candidate.experience_years,
             "status": candidate.status,
+            "skills": [s.skill for s in skills],
             "created_at": candidate.created_at
-        }
-        for candidate in candidates
-    ]
+        })
+    return response_data
 
 
 @router.get("/jobs/{job_id}")
@@ -356,9 +359,13 @@ def compare_candidates(
 
         ensure_candidate_details(candidate, skills, db)
 
+        job = db.query(Job).filter(Job.id == candidate.job_id).first()
+        job_title = job.title if job else "Unknown Role"
+
         results.append({
             "id": str(candidate.id),
             "job_id": str(candidate.job_id),
+            "job_title": job_title,
             "name": candidate.name,
             "email": candidate.email,
             "phone": candidate.phone,

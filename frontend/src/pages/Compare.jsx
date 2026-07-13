@@ -102,7 +102,7 @@ export default function Compare() {
 
       setCandidates(sortedCandidates);
       setCurrentPage(1);
-      toast.success("Candidates loaded successfully");
+      toast.success("Candidates loaded successfully", { toastId: "compare-candidates-load" });
     } catch (error) {
       console.error(error);
       toast.error("Failed to load candidates");

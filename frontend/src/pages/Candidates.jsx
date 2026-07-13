@@ -98,7 +98,7 @@ export default function Candidates() {
 
       setCandidates(sorted);
       setCurrentPage(1);
-      toast.success("Candidates loaded successfully");
+      toast.success("Candidates loaded successfully", { toastId: "candidates-list-load" });
     } catch (error) {
       console.error(error);
       toast.error("Failed to load candidates");

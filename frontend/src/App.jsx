@@ -513,7 +513,7 @@ function JobsPreview({ openCreateModal, onCloseCreateModal }) {
       setJobs(response.data);
       setCurrentPage(1);
 
-      toast.success("Jobs loaded successfully");
+      toast.success("Jobs loaded successfully", { toastId: "jobs-list-load" });
     } catch (error) {
       console.error(error);
       toast.error("Failed to load jobs. Make sure backend is running.");
